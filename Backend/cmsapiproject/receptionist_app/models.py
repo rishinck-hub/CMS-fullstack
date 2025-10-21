@@ -2,6 +2,17 @@ from django.db import models
 from admin_app.models import Doctor, Staff
 
 class Patient(models.Model):
+    BLOOD_GROUP_CHOICES = [
+        ('A+', 'A+'),
+        ('A-', 'A-'),
+        ('B+', 'B+'),
+        ('B-', 'B-'),
+        ('O+', 'O+'),
+        ('O-', 'O-'),
+        ('AB+', 'AB+'),
+        ('AB-', 'AB-'),
+    ]
+
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     dob = models.DateField()
@@ -10,6 +21,7 @@ class Patient(models.Model):
     address = models.TextField()
     emergency_contact = models.CharField(max_length=15)
     medical_history = models.TextField(blank=True)
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, null=True, blank=True)
 
 class Appointment(models.Model):
     STATUS_CHOICES = [
