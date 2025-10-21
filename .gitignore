@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyo
+*.pyd
+*.env
+*.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+myvenv/
+# VS Code
+.vscode/
+# Django
+db.sqlite3
+*.log
+# Environment variables
+.env
+# pip
+pip-log.txt
+# Virtualenv
+# If you use a different folder name for your environment, add it here:
+myvenv/
+# OS generated files
+.DS_Store
+Thumbs.db
+# Tests
+.coverage
+htmlcov/
+# Other
+coverage.xml
+*.coverage
+*.tmp
+*.swp
+migrations/__pycache__/

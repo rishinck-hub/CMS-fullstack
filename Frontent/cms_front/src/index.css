@@ -1,0 +1,15 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-primary: #0d6efd;
+  --color-bg-light: #f7f9fc;
+}
+
+/* Make all pages full height when using MainLayout */
+.main-layout {
+  min-height: 100vh;
+}
