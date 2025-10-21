@@ -5,6 +5,7 @@ import {
   updateUser,
   deleteUser,
 } from "../../services/adminService";
+import UserEditModal from "./UserEditModal";
 import AdminForm from "./AdminForm";
 import UserWizard from "./UserWizard";
 import ConfirmDialog from "../../ui/ConfirmDialog";
@@ -25,6 +26,8 @@ export default function UserManagementTable({ onDataChange }) {
   const searchRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const { showNotification } = useContext(NotificationContext);
   const [confirm, setConfirm] = useState({ show: false, id: null });
   const [forcePassword, setForcePassword] = useState(false);
@@ -85,6 +88,16 @@ export default function UserManagementTable({ onDataChange }) {
     } catch (error) {
       showNotification(error?.toString() || "Error saving user", "danger");
     }
+  }
+
+  function openEdit(user) {
+    console.log(
+      "UserManagementTable.openEdit",
+      user && user.id,
+      user && user.username
+    );
+    setSelectedUser(user);
+    setShowEditModal(true);
   }
 
   async function handleDelete(id) {
@@ -233,9 +246,7 @@ export default function UserManagementTable({ onDataChange }) {
                     <button
                       className="btn btn-secondary btn-sm me-2"
                       onClick={() => {
-                        setEditUser(user);
-                        setForcePassword(false);
-                        setShowModal(true);
+                        openEdit(user);
                       }}
                     >
                       Edit
@@ -327,6 +338,25 @@ export default function UserManagementTable({ onDataChange }) {
         }}
         onSave={handleSave}
       />
+
+      {showEditModal && selectedUser && (
+        <UserEditModal
+          user={selectedUser}
+          show={showEditModal}
+          onClose={() => {
+            console.log("UserEditModal onClose");
+            setShowEditModal(false);
+            setSelectedUser(null);
+          }}
+          onSaved={() => {
+            console.log("UserEditModal onSaved");
+            setShowEditModal(false);
+            setSelectedUser(null);
+            loadUsers();
+            onDataChange && onDataChange();
+          }}
+        />
+      )}
 
       <UserWizard
         show={showWizard}

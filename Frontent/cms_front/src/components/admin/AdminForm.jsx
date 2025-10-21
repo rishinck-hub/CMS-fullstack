@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import { NotificationContext } from "../../context/NotificationContext";
+import { fetchUser } from "../../services/adminService";
 
 // mode: 'user' | 'staff' | 'doctor' | 'spec'
 export default function AdminForm({
@@ -17,9 +18,25 @@ export default function AdminForm({
 
   useEffect(() => {
     if (!show) return;
-    if (initial) setForm(initial);
-    else {
-      // defaults per mode
+    let mounted = true;
+    async function loadInitial() {
+      if (initial && mode === "user" && initial.id) {
+        // fetch full user to ensure all fields are present
+        try {
+          const full = await fetchUser(initial.id);
+          if (!mounted) return;
+          setForm(full || initial);
+          return;
+        } catch (err) {
+          // fallback to provided initial
+        }
+      }
+      if (initial) {
+        setForm(initial);
+        return;
+      }
+
+      // defaults per mode when no initial provided
       if (mode === "user")
         setForm({
           username: "",
@@ -30,7 +47,7 @@ export default function AdminForm({
           is_active: true,
           password: "",
         });
-      if (mode === "staff")
+      else if (mode === "staff")
         setForm({
           user: "",
           phone: "",
@@ -39,15 +56,16 @@ export default function AdminForm({
           hire_date: "",
           address: "",
         });
-      if (mode === "doctor")
+      else if (mode === "doctor")
         setForm({
           user: "",
           specialization: "",
           experience: "",
           consultation_fee: "",
         });
-      if (mode === "spec") setForm({ name: "" });
+      else if (mode === "spec") setForm({ name: "" });
     }
+    loadInitial();
   }, [show, initial, mode]);
 
   function change(field, value) {

@@ -109,8 +109,8 @@ class UserWithProfilesSerializer(serializers.Serializer):
     is_active = serializers.BooleanField(default=True)
     password = serializers.CharField(write_only=True)
 
-    staff = StaffDataSerializer(required=False)
-    doctor = DoctorDataSerializer(required=False)
+    staff = StaffDataSerializer(required=False, allow_null=True)
+    doctor = DoctorDataSerializer(required=False, allow_null=True)
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -135,13 +135,36 @@ class UserWithProfilesSerializer(serializers.Serializer):
             user.set_password(password)
             user.save()
 
+            # If staff_data is provided, attempt to create staff (let DB/field validators handle missing fields)
             if staff_data:
-                Staff.objects.create(user=user, **staff_data)
+                try:
+                    Staff.objects.create(user=user, **staff_data)
+                except Exception as e:
+                    raise serializers.ValidationError({'staff': str(e)})
 
-            if doctor_data:
-                spec_id = doctor_data.pop('specialization')
-                spec = Specialization.objects.get(pk=spec_id)
-                Doctor.objects.create(user=user, specialization=spec, **doctor_data)
+            # If the user's role is Doctor and doctor_data is provided, create the doctor record
+            role = validated_data.get('role', '')
+            if role == 'Doctor' and doctor_data:
+                # ignore empty doctor_data
+                if isinstance(doctor_data, dict) and all(
+                    v in (None, "") for v in doctor_data.values()
+                ):
+                    doctor_data = None
+
+            if user.role == 'Doctor' and doctor_data:
+                spec_id = doctor_data.get('specialization')
+                if not spec_id:
+                    raise serializers.ValidationError({'doctor': 'Specialization id is required for doctor'})
+                try:
+                    spec = Specialization.objects.get(pk=spec_id)
+                except Specialization.DoesNotExist:
+                    raise serializers.ValidationError({'doctor': 'Specialization not found'})
+                doctor_kwargs = doctor_data.copy()
+                doctor_kwargs.pop('specialization', None)
+                try:
+                    Doctor.objects.create(user=user, specialization=spec, **doctor_kwargs)
+                except Exception as e:
+                    raise serializers.ValidationError({'doctor': str(e)})
 
             # Optionally perform side-effects after commit (email, audit)
             # transaction.on_commit(lambda: send_welcome_email(user))

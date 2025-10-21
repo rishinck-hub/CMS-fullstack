@@ -6,6 +6,8 @@ import DoctorTable from "./DoctorTable";
 import SpecializationTable from "./SpecializationTable";
 import Reports from "../../pages/admin/Reports";
 import { useState } from "react";
+import Navbar from "../layout/Navbar";
+import Sidebar from "../layout/Sidebar";
 
 export default function AdminDashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -18,32 +20,42 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="container mt-3">
-      <h2>Admin Dashboard</h2>
-      <div className="row my-4">
-        {stats.map((stat, idx) => (
-          <div className="col-md-3" key={idx}>
-            <StatCard title={stat.title} value={stat.value} icon={stat.icon} />
+    <div>
+      <Navbar />
+      <div className="d-flex">
+        <Sidebar />
+        <div className="container mt-3">
+          <h2>Admin Dashboard</h2>
+          <div className="row my-4">
+            {stats.map((stat, idx) => (
+              <div className="col-md-3" key={idx}>
+                <StatCard
+                  title={stat.title}
+                  value={stat.value}
+                  icon={stat.icon}
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {/* Live reports */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <Reports refreshKey={refreshKey} />
-        </div>
-      </div>
-      <div className="row">
-        <div className="col-12">
-          <UserManagementTable
-            onDataChange={() => setRefreshKey((k) => k + 1)}
-          />
-        </div>
-      </div>
+          {/* Live reports */}
+          <div className="row mb-4">
+            <div className="col-12">
+              <Reports refreshKey={refreshKey} />
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-12">
+              <UserManagementTable
+                onDataChange={() => setRefreshKey((k) => k + 1)}
+              />
+            </div>
+          </div>
 
-      <div className="row mt-4">
-        <div className="col-12">
-          <SpecializationTable />
+          <div className="row mt-4">
+            <div className="col-12">
+              <SpecializationTable />
+            </div>
+          </div>
         </div>
       </div>
     </div>

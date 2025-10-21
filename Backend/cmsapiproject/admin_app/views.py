@@ -44,7 +44,37 @@ class CreateUserWithProfiles(APIView):
 
     def post(self, request):
         from .serializers import UserWithProfilesSerializer
-        serializer = UserWithProfilesSerializer(data=request.data)
+
+        # Defensive: clean empty or null nested objects that may be sent by the client
+        # request.data can be a QueryDict or regular dict - normalize to a shallow dict
+        try:
+            payload = request.data.copy()
+        except Exception:
+            # fallback: coerce to dict
+            payload = dict(request.data)
+
+        # remove doctor/staff if they are null/empty/'null' string or an empty dict/list
+        for key in ('staff', 'doctor'):
+            if key in payload:
+                val = payload.get(key)
+                # handle JSON null / Python None
+                if val is None:
+                    payload.pop(key, None)
+                    continue
+                # handle string representations like 'null' or empty string
+                if isinstance(val, str) and val.strip().lower() in ('', 'null', 'none'):
+                    payload.pop(key, None)
+                    continue
+                # handle QueryDict/list coming from form-data where value may be list or dict
+                if isinstance(val, (list, tuple)) and len(val) == 0:
+                    payload.pop(key, None)
+                    continue
+                if isinstance(val, dict):
+                    # if all values are blank/null, remove the key
+                    if all(v in (None, '') for v in val.values()):
+                        payload.pop(key, None)
+
+        serializer = UserWithProfilesSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response({"id": user.id, "username": user.username}, status=201)

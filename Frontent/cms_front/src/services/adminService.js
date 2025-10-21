@@ -23,14 +23,43 @@ export async function fetchUsers(params = {}) {
   }
 }
 
+// Fetch a single user by id
+export async function fetchUser(id) {
+  try {
+    const res = await api.get(`/admin/users/${id}/`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data?.detail || `Error fetching user ${id}`;
+  }
+}
+
 // Add a new user (admin, doctor, etc.)
 export async function addUser(payload) {
   let loading = true;
   try {
-    const res = await api.post("/admin/users/", payload);
+    // Use atomic endpoint to create user and optional profiles for consistency
+    const res = await api.post("/admin/users-with-profiles/", payload);
     return res.data;
   } catch (error) {
-    throw error.response?.data?.detail || "Could not add user";
+    const data = error.response?.data;
+    if (data) {
+      // If DRF returns a dict of field errors, join them into a string
+      if (typeof data === "object") {
+        try {
+          const parts = [];
+          for (const k of Object.keys(data)) {
+            const v = data[k];
+            if (Array.isArray(v)) parts.push(`${k}: ${v.join(", ")}`);
+            else parts.push(`${k}: ${String(v)}`);
+          }
+          throw parts.join(" | ");
+        } catch (e) {
+          throw String(data);
+        }
+      }
+      throw String(data);
+    }
+    throw error.message || "Could not add user";
   } finally {
     loading = false;
   }
@@ -205,10 +234,19 @@ export async function createUserWithProfiles(payload) {
     const res = await api.post("/admin/users-with-profiles/", payload);
     return res.data;
   } catch (error) {
-    throw (
-      error.response?.data ||
-      error.message ||
-      "Could not create user with profiles"
-    );
+    const data = error.response?.data;
+    if (data) {
+      if (typeof data === "object") {
+        const parts = [];
+        for (const k of Object.keys(data)) {
+          const v = data[k];
+          if (Array.isArray(v)) parts.push(`${k}: ${v.join(", ")}`);
+          else parts.push(`${k}: ${String(v)}`);
+        }
+        throw parts.join(" | ");
+      }
+      throw String(data);
+    }
+    throw error.message || "Could not create user with profiles";
   }
 }
