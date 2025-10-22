@@ -203,50 +203,50 @@ export async function deleteSpecialization(id) {
 }
 
 // Example: Fetch system reports
-export async function fetchSystemReports() {
-  let loading = true;
-  try {
-    const res = await api.get("/admin/reports/"); // Make sure this endpoint exists!
-    return res.data;
-  } catch (error) {
-    throw error.response?.data?.detail || "Could not fetch reports";
-  } finally {
-    loading = false;
-  }
-}
+// export async function fetchSystemReports() {
+//   let loading = true;
+//   try {
+//     const res = await api.get("/admin/reports/"); // Make sure this endpoint exists!
+//     return res.data;
+//   } catch (error) {
+//     throw error.response?.data?.detail || "Could not fetch reports";
+//   } finally {
+//     loading = false;
+//   }
+// }
 
-// Example: Update system settings
-export async function updateSettings(payload) {
-  let loading = true;
-  try {
-    const res = await api.put("/admin/settings/", payload);
-    return res.data;
-  } catch (error) {
-    throw error.response?.data?.detail || "Could not update settings";
-  } finally {
-    loading = false;
-  }
-}
+// // Example: Update system settings
+// export async function updateSettings(payload) {
+//   let loading = true;
+//   try {
+//     const res = await api.put("/admin/settings/", payload);
+//     return res.data;
+//   } catch (error) {
+//     throw error.response?.data?.detail || "Could not update settings";
+//   } finally {
+//     loading = false;
+//   }
+// }
 
-// Create user + optional profiles in one atomic request
-export async function createUserWithProfiles(payload) {
-  try {
-    const res = await api.post("/admin/users-with-profiles/", payload);
-    return res.data;
-  } catch (error) {
-    const data = error.response?.data;
-    if (data) {
-      if (typeof data === "object") {
-        const parts = [];
-        for (const k of Object.keys(data)) {
-          const v = data[k];
-          if (Array.isArray(v)) parts.push(`${k}: ${v.join(", ")}`);
-          else parts.push(`${k}: ${String(v)}`);
-        }
-        throw parts.join(" | ");
-      }
-      throw String(data);
-    }
-    throw error.message || "Could not create user with profiles";
-  }
-}
+// // Create user + optional profiles in one atomic request
+// export async function createUserWithProfiles(payload) {
+//   try {
+//     const res = await api.post("/admin/users-with-profiles/", payload);
+//     return res.data;
+//   } catch (error) {
+//     const data = error.response?.data;
+//     if (data) {
+//       if (typeof data === "object") {
+//         const parts = [];
+//         for (const k of Object.keys(data)) {
+//           const v = data[k];
+//           if (Array.isArray(v)) parts.push(`${k}: ${v.join(", ")}`);
+//           else parts.push(`${k}: ${String(v)}`);
+//         }
+//         throw parts.join(" | ");
+//       }
+//       throw String(data);
+//     }
+//     throw error.message || "Could not create user with profiles";
+//   }
+// }
