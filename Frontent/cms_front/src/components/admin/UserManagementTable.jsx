@@ -13,6 +13,7 @@ import { NotificationContext } from "../../context/NotificationContext";
 import UserDetailsModal from "./UserDetailsModal";
 import StaffForm from "./StaffForm";
 import DoctorForm from "./DoctorForm";
+import { IoIosPersonAdd } from "react-icons/io";
 
 export default function UserManagementTable({ onDataChange }) {
   const [users, setUsers] = useState([]);
@@ -115,7 +116,7 @@ export default function UserManagementTable({ onDataChange }) {
           setShowWizard(true);
         }}
       >
-        Add User
+        <IoIosPersonAdd />Add User
       </button>
 
       {/* Filters / Search UI */}
