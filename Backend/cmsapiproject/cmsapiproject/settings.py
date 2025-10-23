@@ -87,11 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'cms_backend',
         'USER': 'root',
-<<<<<<< HEAD
         'PASSWORD': 'aksa123',
-=======
-        'PASSWORD': 'faithinfotech',
->>>>>>> fb2cbf82949840b74808d4cb5fee186b830b0097
         'HOST': 'localhost',
         'PORT': 3306
     }

@@ -5,7 +5,7 @@ from .views import PatientViewSet, AppointmentViewSet, BillingViewSet
 router = DefaultRouter()
 router.register(r'patients', PatientViewSet)
 router.register(r'appointments', AppointmentViewSet)
-router.register(r'billings', BillingViewSet)
+router.register(r'billing', BillingViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
