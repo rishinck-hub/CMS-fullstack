@@ -16,10 +16,10 @@ export default function Sidebar({ className = "" }) {
     if (hasRole('Admin')) {
       return [
         { path: `${basePath}/dashboard`, label: 'Dashboard', icon: 'bi-speedometer2' },
-        { path: `${basePath}/users`, label: 'Users', icon: 'bi-people' },
-        { path: `${basePath}/doctors`, label: 'Doctors', icon: 'bi-heart-pulse' },
-        { path: `${basePath}/staff`, label: 'Staff', icon: 'bi-person-badge' },
-        { path: `${basePath}/specializations`, label: 'Specializations', icon: 'bi-bookmark' },
+        // { path: `${basePath}/users`, label: 'Users', icon: 'bi-people' },
+        // { path: `${basePath}/doctors`, label: 'Doctors', icon: 'bi-heart-pulse' },
+        // { path: `${basePath}/staff`, label: 'Staff', icon: 'bi-person-badge' },
+        // { path: `${basePath}/specializations`, label: 'Specializations', icon: 'bi-bookmark' },
       ];
     } else if (hasRole('Doctor')) {
       return [
