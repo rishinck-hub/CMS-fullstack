@@ -42,7 +42,6 @@ export default function UserWizard({ show, onClose, onCreated }) {
     };
   }, [show]);
 
-  // helper to know if we should include doctor step
   function hasDoctorStep() {
     return data.role === "Doctor";
   }
@@ -55,21 +54,51 @@ export default function UserWizard({ show, onClose, onCreated }) {
     setData((d) => ({ ...d, [group]: { ...(d[group] || {}), ...obj } }));
   }
 
+  function getAge(dateString) {
+    if (!dateString) return 0;
+    const today = new Date();
+    const dob = new Date(dateString);
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
   async function submit() {
     setLoading(true);
     try {
       const payload = { ...data };
+
+      // Staff DOB validation
+      if (payload.staff && payload.staff.dob) {
+        const staffAge = getAge(payload.staff.dob);
+        if (staffAge < 18) {
+          throw new Error("Staff must be at least 18 years old.");
+        }
+      }
+
+      // Doctor DOB validation (role must be Doctor and staff.dob must exist)
+      if (data.role === "Doctor" && payload.staff && payload.staff.dob) {
+        const doctorAge = getAge(payload.staff.dob);
+        if (doctorAge < 25) {
+          throw new Error("Doctors must be at least 25 years old.");
+        }
+      }
+
       // remove empty nested objects
       if (payload.staff && Object.values(payload.staff).every((v) => !v))
         delete payload.staff;
       if (payload.doctor && Object.values(payload.doctor).every((v) => !v))
         delete payload.doctor;
-      // if role is Doctor, ensure specialization is present
+
+      // Doctor specialization validation
       if (data.role === "Doctor") {
         const specId = payload.doctor?.specialization;
-        if (!specId)
-          throw new Error("Please select a specialization for doctor");
+        if (!specId) throw new Error("Please select a specialization for doctor");
       }
+
       const res = await createUserWithProfiles(payload);
       showNotification("Created successfully", "success");
       onCreated && onCreated(res);

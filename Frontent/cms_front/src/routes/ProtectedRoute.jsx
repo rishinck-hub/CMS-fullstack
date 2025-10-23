@@ -1,7 +1,18 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useRole";
 
 export default function ProtectedRoute({ children }) {
-  const isAuth = true; // placeholder
-  return isAuth ? children : <Navigate to="/login" />;
+  const { isAuthenticated, loading } = useAuth();
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
