@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Input from "../../elements/Input";
 import Button from "../../elements/Button";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../../hooks/useAuth"; // Corrected import
 import { useNavigate } from "react-router-dom";
 import { login as authLogin } from "../../services/authService";
 import api from "../../services/api";
@@ -23,35 +23,19 @@ export default function Login() {
     setLoading(true);
 
     try {
-      console.debug("Login payload:", form);
-
+      // Authenticate
       const res = await authLogin(form.username, form.password);
-
-      // Store tokens for API requests
       if (res?.access) localStorage.setItem("accessToken", res.access);
       if (res?.refresh) localStorage.setItem("refreshToken", res.refresh);
 
-      console.debug("Stored accessToken:", localStorage.getItem("accessToken"));
-
       // Fetch user profile
-      const me = await api.get("/admin/me/"); // or /users/me/
+      const me = await api.get("/admin/me/");
       const user = me.data;
 
       login(user, res.access, res.refresh);
 
-      // Debug user info
-      console.log("Logged in user:", user);
-
-      // Navigate based on role
-      let redirectPath = "/login"; // fallback
-      if (user.role === "Admin") redirectPath = "/admin/dashboard";
-      else if (user.role === "Receptionist") redirectPath = "/receptionist/dashboard";
-      else redirectPath = "/unauthorized";
-
-      console.log(`Redirecting ${user.username} (${user.role}) to ${redirectPath}`);
-      navigate(redirectPath);
+      navigate("/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
       if (err?.response) {
         setError(
           `Login failed: ${err.response.status} ${JSON.stringify(err.response.data)}`
@@ -65,37 +49,78 @@ export default function Login() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 400, marginTop: 80 }}>
-      <h3 className="text-center mb-4">Login</h3>
-      <form onSubmit={handleSubmit} className="card p-4 shadow">
-        <div className="mb-3">
-          <Input
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-            placeholder="Username"
-            autoFocus
-            required
-          />
-        </div>
-        <div className="mb-3">
-          <Input
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Password"
-            required
-          />
-        </div>
-        {error && <div className="text-danger mb-2">{error}</div>}
-        <Button type="submit" color="primary" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </Button>
-        <div className="mt-2 text-center">
-          <a href="/auth/forgot-password">Forgot password?</a>
-        </div>
-      </form>
+    <div className="login-page-bg">
+      <div className="container login-container">
+        <h3 className="text-center mb-4 text-white fw-bold">Sign In to ClinicMS</h3>
+        <form onSubmit={handleSubmit} className="login-card card p-4 border-0 shadow-lg">
+          <div className="mb-3">
+            <Input
+              name="username"
+              value={form.username}
+              onChange={handleChange}
+              placeholder="Username"
+              autoFocus
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <Input
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Password"
+              required
+            />
+          </div>
+          {error && <div className="text-danger mb-2">{error}</div>}
+          <Button type="submit" color="primary" disabled={loading} className="w-100 mb-2">
+            {loading ? "Logging in..." : "Login"}
+          </Button>
+          {/* <div className="mt-2 text-center">
+            <a href="/auth/forgot-password" className="link-primary text-decoration-none">
+              Forgot password?
+            </a>
+          </div> */}
+        </form>
+      </div>
+      <style>{`
+        .login-page-bg {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .login-container {
+          max-width: 410px;
+          width: 100%;
+          margin: 0 auto;
+        }
+        .login-card {
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(102,126,234,0.18);
+          background: #fff;
+          transition: box-shadow 0.3s;
+        }
+        .login-card:hover {
+          box-shadow: 0 16px 40px rgba(118,75,162,0.18);
+        }
+        .login-card .btn {
+          border-radius: 8px;
+          font-weight: 500;
+          font-size: 1rem;
+          transition: all 0.3s ease;
+        }
+        .login-card .btn-primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+        }
+        .login-card .btn-primary:hover {
+          background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+          box-shadow: 0 4px 16px rgba(102,126,234,0.18);
+        }
+      `}</style>
     </div>
   );
 }

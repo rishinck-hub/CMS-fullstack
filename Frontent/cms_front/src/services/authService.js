@@ -66,4 +66,24 @@ export async function forgotPassword(email) {
   }
 }
 
+// Get current user profile with role-specific data
+export async function getCurrentUser() {
+  try {
+    const response = await api.get("/admin/me/");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.detail || "Failed to get user profile";
+  }
+}
+
+// Get role-specific dashboard data
+export async function getDashboardData() {
+  try {
+    const response = await api.get("/admin/dashboard/");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.detail || "Failed to get dashboard data";
+  }
+}
+
 // Logout is just client-side: clear localStorage, etc.

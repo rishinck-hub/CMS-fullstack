@@ -1,50 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { fetchBills, deleteBill } from "../../services/receptionistService";
+import React from "react";
 
-export default function BillingTable({ onDataChange }) {
-  const [bills, setBills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+export default function BillingTable({ bills, onDataChange }) {
+  if (!bills || bills.length === 0) return <div>No billing records found.</div>;
 
-  const loadBills = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await fetchBills();
-      setBills(data.results || []);
-    } catch (err) {
-      setError(err.toString());
-    }
-    setLoading(false);
+  const handleMarkPaid = (id) => {
+    alert("Mark bill " + id + " as paid");
   };
-
-  useEffect(() => {
-    loadBills();
-  }, []);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this bill?")) return;
-    try {
-      await deleteBill(id);
-      loadBills();
-      if (onDataChange) onDataChange();
-    } catch (err) {
-      alert("Error deleting bill: " + err);
-    }
-  };
-
-  if (loading) return <div>Loading bills...</div>;
-  if (error) return <div className="text-danger">Error: {error}</div>;
 
   return (
     <table className="table table-bordered table-hover">
       <thead className="table-light">
         <tr>
           <th>ID</th>
-          <th>Appointment</th>
+          <th>Appointment ID</th>
           <th>Consultation Fee</th>
           <th>Medicine Fee</th>
           <th>Total Fee</th>
+          <th>Status</th>
           <th>Created By</th>
           <th>Timestamp</th>
           <th>Actions</th>
@@ -54,16 +26,25 @@ export default function BillingTable({ onDataChange }) {
         {bills.map((b) => (
           <tr key={b.id}>
             <td>{b.id}</td>
-            <td>{b.appointment?.id}</td>
+            <td>{b.appointment?.id || "N/A"}</td>
             <td>{b.consultation_fee}</td>
             <td>{b.medicine_fee}</td>
             <td>{b.total_fee}</td>
+            <td>{b.is_paid ? "Paid" : "Pending"}</td>
             <td>{b.created_by?.first_name || "N/A"}</td>
             <td>{new Date(b.timestamp).toLocaleString()}</td>
             <td>
+              {!b.is_paid && (
+                <button
+                  className="btn btn-sm btn-success me-2"
+                  onClick={() => handleMarkPaid(b.id)}
+                >
+                  Mark Paid
+                </button>
+              )}
               <button
                 className="btn btn-sm btn-danger"
-                onClick={() => handleDelete(b.id)}
+                onClick={() => alert("Delete bill " + b.id)}
               >
                 Delete
               </button>

@@ -1,22 +1,18 @@
-import api from "./api";
+import api from "./api"; // Axios instance or base API
 
-// ===================== PATIENTS =====================
 export const DEFAULT_PAGE_SIZE = 20;
 
-// Fetch all patients with optional filters
+// ===================== PATIENTS =====================
+
 export async function fetchPatients(params = {}) {
   try {
     const res = await api.get("/receptionist/patients/", { params });
-    if (res.data && Array.isArray(res.data.results)) {
-      return res.data;
-    }
-    return { results: res.data, count: Array.isArray(res.data) ? res.data.length : 0 };
+    return res.data.results || res.data; // support DRF pagination
   } catch (error) {
     throw error.response?.data?.detail || "Error fetching patients";
   }
 }
 
-// Fetch a single patient
 export async function fetchPatient(id) {
   try {
     const res = await api.get(`/receptionist/patients/${id}/`);
@@ -26,7 +22,6 @@ export async function fetchPatient(id) {
   }
 }
 
-// Add a new patient
 export async function addPatient(payload) {
   try {
     const res = await api.post("/receptionist/patients/", payload);
@@ -36,7 +31,6 @@ export async function addPatient(payload) {
   }
 }
 
-// Update patient
 export async function updatePatient(id, payload) {
   try {
     const res = await api.put(`/receptionist/patients/${id}/`, payload);
@@ -46,7 +40,6 @@ export async function updatePatient(id, payload) {
   }
 }
 
-// Delete patient
 export async function deletePatient(id) {
   try {
     const res = await api.delete(`/receptionist/patients/${id}/`);
@@ -58,17 +51,24 @@ export async function deletePatient(id) {
 
 // ===================== APPOINTMENTS =====================
 
-// Fetch appointments (today / upcoming / filters)
 export async function fetchAppointments(params = {}) {
   try {
     const res = await api.get("/receptionist/appointments/", { params });
-    return res.data;
+    return res.data.results || res.data;
   } catch (error) {
     throw error.response?.data?.detail || "Error fetching appointments";
   }
 }
 
-// Add a new appointment
+export async function fetchAppointment(id) {
+  try {
+    const res = await api.get(`/receptionist/appointments/${id}/`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data?.detail || `Error fetching appointment ${id}`;
+  }
+}
+
 export async function addAppointment(payload) {
   try {
     const res = await api.post("/receptionist/appointments/", payload);
@@ -78,7 +78,6 @@ export async function addAppointment(payload) {
   }
 }
 
-// Update appointment
 export async function updateAppointment(id, payload) {
   try {
     const res = await api.put(`/receptionist/appointments/${id}/`, payload);
@@ -88,7 +87,6 @@ export async function updateAppointment(id, payload) {
   }
 }
 
-// Delete appointment
 export async function deleteAppointment(id) {
   try {
     const res = await api.delete(`/receptionist/appointments/${id}/`);
@@ -100,17 +98,24 @@ export async function deleteAppointment(id) {
 
 // ===================== BILLING =====================
 
-// Fetch bills
 export async function fetchBills(params = {}) {
   try {
     const res = await api.get("/receptionist/billing/", { params });
-    return res.data;
+    return res.data.results || res.data;
   } catch (error) {
     throw error.response?.data?.detail || "Error fetching bills";
   }
 }
 
-// Add a bill
+export async function fetchBill(id) {
+  try {
+    const res = await api.get(`/receptionist/billing/${id}/`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data?.detail || `Error fetching bill ${id}`;
+  }
+}
+
 export async function addBill(payload) {
   try {
     const res = await api.post("/receptionist/billing/", payload);
@@ -120,7 +125,6 @@ export async function addBill(payload) {
   }
 }
 
-// Update a bill
 export async function updateBill(id, payload) {
   try {
     const res = await api.put(`/receptionist/billing/${id}/`, payload);
@@ -130,7 +134,6 @@ export async function updateBill(id, payload) {
   }
 }
 
-// Delete a bill
 export async function deleteBill(id) {
   try {
     const res = await api.delete(`/receptionist/billing/${id}/`);
@@ -140,12 +143,17 @@ export async function deleteBill(id) {
   }
 }
 
-// ===================== DASHBOARD STATS =====================
-export async function fetchDashboardStats() {
-  try {
-    const res = await api.get("/receptionist/dashboard-stats/");
-    return res.data;
-  } catch (error) {
-    throw error.response?.data?.detail || "Could not fetch dashboard stats";
-  }
+// ===================== UTILITY FUNCTIONS =====================
+
+// Calculate dashboard stats from fetched data
+export function calculateDashboardStats(patients, appointments, bills) {
+  const today = new Date().toDateString();
+
+  return {
+    total_patients: patients.length,
+    today_appointments: appointments.filter(
+      (a) => new Date(a.date).toDateString() === today
+    ).length,
+    pending_bills: bills.filter((b) => !b.is_paid).length,
+  };
 }

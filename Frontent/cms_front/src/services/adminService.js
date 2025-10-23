@@ -7,6 +7,7 @@ export async function fetchUsers(params = {}) {
   let loading = true;
   try {
     const res = await api.get("/admin/users/", { params });
+    
     // Support paginated DRF response { results: [], count, next, previous }
     if (res.data && Array.isArray(res.data.results)) {
       return res.data;
@@ -17,6 +18,7 @@ export async function fetchUsers(params = {}) {
       count: Array.isArray(res.data) ? res.data.length : 0,
     };
   } catch (error) {
+    console.error('Error fetching users:', error);
     throw error.response?.data?.detail || "Error fetching users";
   } finally {
     loading = false;
@@ -199,6 +201,16 @@ export async function deleteSpecialization(id) {
     return res.data;
   } catch (error) {
     throw error.response?.data?.detail || "Could not delete specialization";
+  }
+}
+
+// Fetch dashboard statistics
+export async function fetchDashboardStats() {
+  try {
+    const res = await api.get("/admin/dashboard/");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data?.detail || "Could not fetch dashboard stats";
   }
 }
 

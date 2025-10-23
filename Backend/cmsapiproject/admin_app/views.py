@@ -1,5 +1,6 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import User, Specialization, Staff, Doctor
 from .serializers import UserSerializer, SpecializationSerializer, StaffSerializer, DoctorSerializer
 from common.permissions import IsDoctor, IsPharmacist, IsAdmin, IsReceptionist 
@@ -12,6 +13,11 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['role', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['username', 'role', 'is_active', 'date_joined']
+    ordering = ['username']
 
 class SpecializationViewSet(viewsets.ModelViewSet):
     queryset = Specialization.objects.all()
@@ -30,12 +36,30 @@ class DoctorViewSet(viewsets.ModelViewSet):
 
 
 class MeView(APIView):
-    """Return current authenticated user info."""
+    """Return current authenticated user info with profile data."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        user = request.user
+        serializer = UserSerializer(user)
+        user_data = serializer.data
+        
+        # Add profile data based on role
+        try:
+            if user.role == 'Doctor':
+                doctor_profile = Doctor.objects.get(user=user)
+                from .serializers import DoctorSerializer
+                profile_serializer = DoctorSerializer(doctor_profile)
+                user_data['profile'] = profile_serializer.data
+            elif user.role in ['Admin', 'Receptionist', 'Pharmacist']:
+                staff_profile = Staff.objects.get(user=user)
+                from .serializers import StaffSerializer
+                profile_serializer = StaffSerializer(staff_profile)
+                user_data['profile'] = profile_serializer.data
+        except (Doctor.DoesNotExist, Staff.DoesNotExist):
+            user_data['profile'] = None
+            
+        return Response(user_data)
 
 
 class CreateUserWithProfiles(APIView):
@@ -78,3 +102,50 @@ class CreateUserWithProfiles(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response({"id": user.id, "username": user.username}, status=201)
+
+
+class DashboardView(APIView):
+    """Return role-specific dashboard data."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        dashboard_data = {
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'role': user.role,
+                'is_active': user.is_active
+            }
+        }
+        
+        # Add role-specific data
+        if user.role == 'Admin':
+            dashboard_data.update({
+                'total_users': User.objects.count(),
+                'total_doctors': Doctor.objects.count(),
+                'total_staff': Staff.objects.count(),
+                'recent_users': UserSerializer(User.objects.order_by('-date_joined')[:5], many=True).data
+            })
+        elif user.role == 'Doctor':
+            try:
+                doctor = Doctor.objects.get(user=user)
+                dashboard_data.update({
+                    'specialization': doctor.specialization.name if doctor.specialization else None,
+                    'experience': doctor.experience,
+                    'consultation_fee': doctor.consultation_fee
+                })
+            except Doctor.DoesNotExist:
+                pass
+        elif user.role == 'Receptionist':
+            dashboard_data.update({
+                'can_manage_patients': True,
+                'can_schedule_appointments': True
+            })
+        elif user.role == 'Pharmacist':
+            dashboard_data.update({
+                'can_manage_medicines': True,
+                'can_process_prescriptions': True
+            })
+            
+        return Response(dashboard_data)

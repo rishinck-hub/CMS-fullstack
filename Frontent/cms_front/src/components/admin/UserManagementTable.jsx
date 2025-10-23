@@ -13,6 +13,7 @@ import { NotificationContext } from "../../context/NotificationContext";
 import UserDetailsModal from "./UserDetailsModal";
 import StaffForm from "./StaffForm";
 import DoctorForm from "./DoctorForm";
+import { IoIosPersonAdd } from "react-icons/io";
 
 export default function UserManagementTable({ onDataChange }) {
   const [users, setUsers] = useState([]);
@@ -53,10 +54,19 @@ export default function UserManagementTable({ onDataChange }) {
         ordering: ordering || undefined,
         ...opts,
       };
+      
+      // Remove undefined values to avoid sending them to the API
+      Object.keys(params).forEach(key => {
+        if (params[key] === undefined || params[key] === '') {
+          delete params[key];
+        }
+      });
+      
       const data = await fetchUsers(params);
       setUsers(data.results || []);
       setTotalCount(data.count || 0);
     } catch (err) {
+      console.error('Error loading users:', err);
       showNotification(err?.toString() || "Error fetching users", "danger");
     } finally {
       setLoading(false);
@@ -115,7 +125,7 @@ export default function UserManagementTable({ onDataChange }) {
           setShowWizard(true);
         }}
       >
-        Add User
+        <IoIosPersonAdd />Add User
       </button>
 
       {/* Filters / Search UI */}
@@ -131,7 +141,7 @@ export default function UserManagementTable({ onDataChange }) {
             searchRef.current = setTimeout(() => {
               setPage(1);
               // pass current search value so stale state doesn't send previous value
-              loadUsers({ page: 1, search: v });
+              loadUsers({ page: 1, search: v, role: roleFilter, ordering: ordering });
             }, 400);
           }}
         />
@@ -143,7 +153,7 @@ export default function UserManagementTable({ onDataChange }) {
             setRoleFilter(v);
             setPage(1);
             // pass role in opts to avoid using stale state
-            loadUsers({ page: 1, role: v });
+            loadUsers({ page: 1, role: v, search: search, ordering: ordering });
           }}
         >
           <option value="">All roles</option>
@@ -160,7 +170,7 @@ export default function UserManagementTable({ onDataChange }) {
             onClick={() => {
               const next = ordering === "role" ? "-role" : "role";
               setOrdering(next);
-              loadUsers({ ordering: next });
+              loadUsers({ ordering: next, search: search, role: roleFilter, page: 1 });
             }}
             title="Sort by role"
           >
@@ -183,7 +193,7 @@ export default function UserManagementTable({ onDataChange }) {
                     const next =
                       ordering === "username" ? "-username" : "username";
                     setOrdering(next);
-                    loadUsers({ ordering: next });
+                    loadUsers({ ordering: next, search: search, role: roleFilter, page: 1 });
                   }}
                 >
                   Username{" "}
@@ -198,7 +208,7 @@ export default function UserManagementTable({ onDataChange }) {
                   onClick={() => {
                     const next = ordering === "role" ? "-role" : "role";
                     setOrdering(next);
-                    loadUsers({ ordering: next });
+                    loadUsers({ ordering: next, search: search, role: roleFilter, page: 1 });
                   }}
                 >
                   Role{" "}
@@ -214,7 +224,7 @@ export default function UserManagementTable({ onDataChange }) {
                     const next =
                       ordering === "is_active" ? "-is_active" : "is_active";
                     setOrdering(next);
-                    loadUsers({ ordering: next });
+                    loadUsers({ ordering: next, search: search, role: roleFilter, page: 1 });
                   }}
                 >
                   Status{" "}
@@ -295,7 +305,7 @@ export default function UserManagementTable({ onDataChange }) {
                       onClick={() => {
                         if (page > 1) {
                           setPage(page - 1);
-                          loadUsers({ page: page - 1 });
+                          loadUsers({ page: page - 1, search: search, role: roleFilter, ordering: ordering });
                         }
                       }}
                     >
@@ -312,7 +322,7 @@ export default function UserManagementTable({ onDataChange }) {
                       onClick={() => {
                         if (page * pageSize < totalCount) {
                           setPage(page + 1);
-                          loadUsers({ page: page + 1 });
+                          loadUsers({ page: page + 1, search: search, role: roleFilter, ordering: ordering });
                         }
                       }}
                     >
