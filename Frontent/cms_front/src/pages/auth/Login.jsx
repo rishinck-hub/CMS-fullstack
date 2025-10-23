@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import Input from "../../elements/Input";
 import Button from "../../elements/Button";
 import useAuth from "../../hooks/useAuth";
-import useRole from "../../hooks/useRole";
 import { useNavigate } from "react-router-dom";
 import { login as authLogin } from "../../services/authService";
 import api from "../../services/api";
@@ -22,34 +21,46 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       console.debug("Login payload:", form);
+
       const res = await authLogin(form.username, form.password);
-      console.debug("Token response:", res);
-      // store tokens immediately so interceptor can attach Authorization header
+
+      // Store tokens for API requests
       if (res?.access) localStorage.setItem("accessToken", res.access);
       if (res?.refresh) localStorage.setItem("refreshToken", res.refresh);
+
       console.debug("Stored accessToken:", localStorage.getItem("accessToken"));
-      // fetch the user profile from backend
-      const me = await api.get("/admin/me/");
+
+      // Fetch user profile
+      const me = await api.get("/admin/me/"); // or /users/me/
       const user = me.data;
+
       login(user, res.access, res.refresh);
-      // navigate based on role
-      const rolePath = user.role ? `/${user.role.toLowerCase()}` : "/admin";
-      navigate(`${rolePath}/dashboard`);
+
+      // Debug user info
+      console.log("Logged in user:", user);
+
+      // Navigate based on role
+      let redirectPath = "/login"; // fallback
+      if (user.role === "Admin") redirectPath = "/admin/dashboard";
+      else if (user.role === "Receptionist") redirectPath = "/receptionist/dashboard";
+      else redirectPath = "/unauthorized";
+
+      console.log(`Redirecting ${user.username} (${user.role}) to ${redirectPath}`);
+      navigate(redirectPath);
     } catch (err) {
       console.error("Login error:", err);
-      // axios error
       if (err?.response) {
         setError(
-          `Login failed: ${err.response.status} ${JSON.stringify(
-            err.response.data
-          )}`
+          `Login failed: ${err.response.status} ${JSON.stringify(err.response.data)}`
         );
       } else {
         setError(err?.toString() || "Invalid credentials");
       }
     }
+
     setLoading(false);
   };
 

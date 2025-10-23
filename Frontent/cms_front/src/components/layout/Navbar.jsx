@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 
 export default function Navbar() {
-  const { isAuthenticated, user } = useContext(AuthContext);
-  const adminTarget = isAuthenticated
-    ? user?.role === "Admin"
-      ? "/admin/dashboard"
-      : "/unauthorized"
-    : "/login";
+  const { isAuthenticated, user, logout } = useContext(AuthContext);
+
+  // Determine role-based dashboard link
+  let dashboardLink = "/login"; // default
+  if (isAuthenticated && user?.role === "Admin") {
+    dashboardLink = "/admin/dashboard";
+  } else if (isAuthenticated && user?.role === "Receptionist") {
+    dashboardLink = "/receptionist/dashboard";
+  }
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -26,16 +29,32 @@ export default function Navbar() {
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <Link className="nav-link" to="/login">
-                Login
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to={adminTarget}>
-                Admin
-              </Link>
-            </li>
+            {!isAuthenticated && (
+              <li className="nav-item">
+                <Link className="nav-link" to="/login">
+                  Login
+                </Link>
+              </li>
+            )}
+
+            {isAuthenticated && (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to={dashboardLink}>
+                    {user.role} Dashboard
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className="nav-link btn btn-link"
+                    style={{ textDecoration: "none" }}
+                    onClick={logout}
+                  >
+                    Logout
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>
