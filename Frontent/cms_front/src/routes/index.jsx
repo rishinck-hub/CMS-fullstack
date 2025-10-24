@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import Login from "../pages/auth/Login";
 import AdminDashboard from "../components/admin/AdminDashboard";
+import ReceptionistDashboard from "../components/receptionist/ReceptionistDashboard";
 import LandingPage from "../pages/LandingPage";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleBasedRoute from "./RoleBasedRoute";

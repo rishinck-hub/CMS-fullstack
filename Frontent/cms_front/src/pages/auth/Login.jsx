@@ -21,6 +21,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       // Authenticate
       const res = await authLogin(form.username, form.password);
@@ -30,20 +31,20 @@ export default function Login() {
       // Fetch user profile
       const me = await api.get("/admin/me/");
       const user = me.data;
+
       login(user, res.access, res.refresh);
 
       navigate("/dashboard");
     } catch (err) {
       if (err?.response) {
         setError(
-          `Login failed: ${err.response.status} ${JSON.stringify(
-            err.response.data
-          )}`
+          `Login failed: ${err.response.status} ${JSON.stringify(err.response.data)}`
         );
       } else {
         setError(err?.toString() || "Invalid credentials");
       }
     }
+
     setLoading(false);
   };
 

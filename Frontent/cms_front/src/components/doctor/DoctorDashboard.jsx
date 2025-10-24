@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doctorService } from '../../services/doctorService';
+import Navbar from "../layout/Navbar";
+import Sidebar from "../layout/Sidebar";
 
 const DoctorDashboard = () => {
   const [dashboardData, setDashboardData] = useState({

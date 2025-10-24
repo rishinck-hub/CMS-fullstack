@@ -14,6 +14,10 @@ import UserDetailsModal from "./UserDetailsModal";
 import StaffForm from "./StaffForm";
 import DoctorForm from "./DoctorForm";
 import { IoIosPersonAdd } from "react-icons/io";
+import { FaEdit } from "react-icons/fa";
+import { MdLockReset } from "react-icons/md";
+import { MdOutlinePreview } from "react-icons/md";
+import { MdDeleteForever } from "react-icons/md";
 
 export default function UserManagementTable({ onDataChange }) {
   const [users, setUsers] = useState([]);
@@ -54,14 +58,13 @@ export default function UserManagementTable({ onDataChange }) {
         ordering: ordering || undefined,
         ...opts,
       };
-      
-      // Remove undefined values to avoid sending them to the API
+
       Object.keys(params).forEach(key => {
         if (params[key] === undefined || params[key] === '') {
           delete params[key];
         }
       });
-      
+
       const data = await fetchUsers(params);
       setUsers(data.results || []);
       setTotalCount(data.count || 0);
@@ -77,12 +80,10 @@ export default function UserManagementTable({ onDataChange }) {
     try {
       if (editUser) {
         const payload = { ...user };
-        // Only include password if provided
         if (!payload.password) delete payload.password;
         await updateUser(editUser.id, payload);
       } else {
         await addUser(user);
-        // show the created password briefly to admin (entered in form)
         if (user.password)
           showNotification(
             `Password for ${user.username}: ${user.password}`,
@@ -101,11 +102,6 @@ export default function UserManagementTable({ onDataChange }) {
   }
 
   function openEdit(user) {
-    console.log(
-      "UserManagementTable.openEdit",
-      user && user.id,
-      user && user.username
-    );
     setSelectedUser(user);
     setShowEditModal(true);
   }
@@ -118,15 +114,58 @@ export default function UserManagementTable({ onDataChange }) {
     <div>
       <h4 className="mb-3">User Management</h4>
       <button
-        className="btn btn-success mb-2"
+        className="add-user-btn mb-2"
         onClick={() => {
           setEditUser(null);
           setForcePassword(false);
           setShowWizard(true);
         }}
       >
-        <IoIosPersonAdd />Add User
+        <IoIosPersonAdd style={{ marginBottom: "3px", marginRight: "6px" }}/> Add User
       </button>
+      <style>
+        {`
+          .add-user-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .add-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: #2ca9edff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
+          .cus-user-btn {
+            background: linear-gradient(135deg, #009ef3ff 0%, #0091ffff 100%);
+            color: #fff;
+            border: none;
+            margin:2px;
+            font-weight: 400;
+            border-radius: 8px;
+            padding: 4px 18px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .cus-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #0858ecff 0%, #3054f4ff 100%);
+            color: #ffffffff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
+        `}
+      </style>
 
       {/* Filters / Search UI */}
       <div className="d-flex gap-2 align-items-center mt-2">
@@ -140,7 +179,6 @@ export default function UserManagementTable({ onDataChange }) {
             if (searchRef.current) clearTimeout(searchRef.current);
             searchRef.current = setTimeout(() => {
               setPage(1);
-              // pass current search value so stale state doesn't send previous value
               loadUsers({ page: 1, search: v, role: roleFilter, ordering: ordering });
             }, 400);
           }}
@@ -152,7 +190,6 @@ export default function UserManagementTable({ onDataChange }) {
             const v = e.target.value;
             setRoleFilter(v);
             setPage(1);
-            // pass role in opts to avoid using stale state
             loadUsers({ page: 1, role: v, search: search, ordering: ordering });
           }}
         >
@@ -164,9 +201,7 @@ export default function UserManagementTable({ onDataChange }) {
         </select>
         <div className="btn-group">
           <button
-            className={`btn btn-outline-secondary ${
-              ordering === "role" ? "active" : ""
-            }`}
+            className={`btn btn-outline-secondary ${ordering === "role" ? "active" : ""}`}
             onClick={() => {
               const next = ordering === "role" ? "-role" : "role";
               setOrdering(next);
@@ -254,35 +289,34 @@ export default function UserManagementTable({ onDataChange }) {
                   </td>
                   <td>
                     <button
-                      className="btn btn-secondary btn-sm me-2"
+                      className="cus-user-btn mb-2"
                       onClick={() => {
                         openEdit(user);
                       }}
                     >
-                      Edit
+                     <FaEdit /> Edit
                     </button>
                     <button
-                      className="btn btn-info btn-sm me-2"
+                      className="cus-user-btn mb-2"
                       onClick={() => setDetailsUser(user)}
                     >
-                      View
+                      <MdOutlinePreview />View
                     </button>
                     <button
-                      className="btn btn-warning btn-sm me-2"
+                      className="cus-user-btn mb-2"
                       onClick={() => {
-                        // Reset password -> open form requiring a new password
                         setEditUser(user);
                         setForcePassword(true);
                         setShowModal(true);
                       }}
                     >
-                      Reset Password
+                      <MdLockReset />Reset Password
                     </button>
                     <button
-                      className="btn btn-danger btn-sm"
+                      className="cus-user-btn mb-2"
                       onClick={() => handleDelete(user.id)}
                     >
-                      Delete
+                      <MdDeleteForever />Delete
                     </button>
                   </td>
                 </tr>
@@ -336,6 +370,7 @@ export default function UserManagementTable({ onDataChange }) {
         </>
       )}
 
+      {/* Modals and forms (unchanged) */}
       <AdminForm
         show={showModal}
         mode="user"
@@ -354,12 +389,10 @@ export default function UserManagementTable({ onDataChange }) {
           user={selectedUser}
           show={showEditModal}
           onClose={() => {
-            console.log("UserEditModal onClose");
             setShowEditModal(false);
             setSelectedUser(null);
           }}
           onSaved={() => {
-            console.log("UserEditModal onSaved");
             setShowEditModal(false);
             setSelectedUser(null);
             loadUsers();

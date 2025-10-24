@@ -5,7 +5,7 @@ from datetime import date
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'password', 'role', 'is_active')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'password', 'role', 'is_active')
         extra_kwargs = {'password': {'write_only': True}}
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():

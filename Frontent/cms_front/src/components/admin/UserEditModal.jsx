@@ -15,16 +15,29 @@ import {
 export default function UserEditModal({ user, show, onClose, onSaved }) {
   const { showNotification } = useContext(NotificationContext);
   const [activeTab, setActiveTab] = useState("user");
-  const [userForm, setUserForm] = useState(null);
+  const [userForm, setUserForm] = useState({
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    role: "",
+    is_active: true,
+  });
   const [staff, setStaff] = useState(null);
   const [doctor, setDoctor] = useState(null);
   const [specializations, setSpecializations] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // don't run if modal hidden or user not provided
     if (!show || !user) return;
-    setUserForm(null);
+    setUserForm({
+      username: "",
+      email: "",
+      first_name: "",
+      last_name: "",
+      role: "",
+      is_active: true,
+    });
     setStaff(null);
     setDoctor(null);
     setSpecializations([]);
@@ -37,13 +50,21 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
         try {
           fullUser = await fetchUser(user.id);
         } catch (e) {
-          // fallback to passed user object
           fullUser = user;
         }
-
         if (!mounted) return;
-        // prefill user form with fetched data
-        setUserForm(fullUser ? { ...fullUser } : null);
+        // Prefill user form with fetched data or provided user
+        setUserForm({
+          username: fullUser.username || "",
+          email: fullUser.email || "",
+          first_name: fullUser.first_name || "",
+          last_name: fullUser.last_name || "",
+          role: fullUser.role || "",
+          is_active:
+            typeof fullUser.is_active === "boolean"
+              ? fullUser.is_active
+              : true,
+        });
 
         const [staffs, doctors, specs] = await Promise.all([
           fetchStaffs(),
@@ -92,7 +113,6 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
     };
   }, [show, user]);
 
-  // wait until modal shown, user provided and userForm has been initialized by effect
   if (!show || !user || userForm == null) return null;
 
   function changeUser(field, value) {
@@ -127,7 +147,6 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
     setLoading(true);
     try {
       const payload = { ...staff };
-      // ensure user field is username or id accepted by API
       payload.user = payload.user?.id || payload.user || user.id;
       if (staff && staff.id) {
         await updateStaff(staff.id, payload);
@@ -173,7 +192,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
       <div className="modal-dialog modal-lg">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Edit user: {user.username}</h5>
+            <h5 className="modal-title">Edit user: {userForm.username}</h5>
             <button className="btn-close" onClick={onClose} />
           </div>
           <div className="modal-body">
@@ -188,9 +207,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
               </li>
               <li className="nav-item">
                 <button
-                  className={`nav-link ${
-                    activeTab === "staff" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeTab === "staff" ? "active" : ""}`}
                   onClick={() => setActiveTab("staff")}
                 >
                   Staff
@@ -198,9 +215,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
               </li>
               <li className="nav-item">
                 <button
-                  className={`nav-link ${
-                    activeTab === "doctor" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeTab === "doctor" ? "active" : ""}`}
                   onClick={() => setActiveTab("doctor")}
                 >
                   Doctor
@@ -260,7 +275,6 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
                   />
                   <label className="form-check-label">Active</label>
                 </div>
-
                 <div className="mt-2">
                   <button
                     className="btn btn-primary"
