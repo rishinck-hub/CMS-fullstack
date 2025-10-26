@@ -165,7 +165,9 @@ class UserWithProfilesSerializer(serializers.Serializer):
                     Doctor.objects.create(user=user, specialization=spec, **doctor_kwargs)
                 except Exception as e:
                     raise serializers.ValidationError({'doctor': str(e)})
-
+            # Send welcome email after commit
+            from .views import send_welcome_email
+            transaction.on_commit(lambda: send_welcome_email(user, password))
             # Optionally perform side-effects after commit (email, audit)
             # transaction.on_commit(lambda: send_welcome_email(user))
 

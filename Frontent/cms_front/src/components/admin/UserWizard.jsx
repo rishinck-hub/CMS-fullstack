@@ -69,31 +69,54 @@ export default function UserWizard({ show, onClose, onCreated }) {
   async function submit() {
     setLoading(true);
     try {
+      if (!data.username || !/^[a-zA-Z0-9_]{3,}$/.test(data.username)) {
+        throw new Error("Username is required (min 3 chars, only letters, numbers, underscore, no spaces).");
+      }
+      if (!data.email || !/^[\w\.-]+@[\w-]+(\.[\w-]+)+$/.test(data.email)) {
+        throw new Error("Please enter a valid email address.");
+      }
+      if (!data.first_name || !/^[a-zA-Z]+$/.test(data.first_name)) {
+        throw new Error("First name is required and can only contain letters.");
+      }
+      if (
+        !data.password ||
+        data.password.length < 6 ||
+        !/[A-Za-z]/.test(data.password) ||
+        !/\d/.test(data.password)
+      ) {
+        throw new Error("Password must be at least 6 characters and contain both letters and numbers.");
+      }
+      if (data.staff?.phone && !/^[6-9]\d{9}$/.test(data.staff.phone)) {
+        throw new Error("Phone must be 10 digits and start with 6, 7, 8, or 9.");
+      }
+      if (step > 0 && !data.staff?.blood_group) {
+        throw new Error("Blood group is required for staff.");
+      }
+
       const payload = { ...data };
 
-      // Staff DOB validation
+      if (payload.staff && Object.values(payload.staff).every((v) => !v))
+        delete payload.staff;
+      if (payload.doctor && Object.values(payload.doctor).every((v) => !v))
+        delete payload.doctor;
+
+      // Remove dummy gender from payload before sending to backend
+      if (payload.staff && "gender" in payload.staff) {
+        delete payload.staff.gender;
+      }
+
       if (payload.staff && payload.staff.dob) {
         const staffAge = getAge(payload.staff.dob);
         if (staffAge < 18) {
           throw new Error("Staff must be at least 18 years old.");
         }
       }
-
-      // Doctor DOB validation (role must be Doctor and staff.dob must exist)
       if (data.role === "Doctor" && payload.staff && payload.staff.dob) {
         const doctorAge = getAge(payload.staff.dob);
         if (doctorAge < 25) {
           throw new Error("Doctors must be at least 25 years old.");
         }
       }
-
-      // remove empty nested objects
-      if (payload.staff && Object.values(payload.staff).every((v) => !v))
-        delete payload.staff;
-      if (payload.doctor && Object.values(payload.doctor).every((v) => !v))
-        delete payload.doctor;
-
-      // Doctor specialization validation
       if (data.role === "Doctor") {
         const specId = payload.doctor?.specialization;
         if (!specId) throw new Error("Please select a specialization for doctor");
@@ -130,7 +153,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
             {step === 0 && (
               <div>
                 <div className="mb-2">
-                  <label>Username</label>
+                  <label>Username <span className="text-danger">*</span></label>
                   <input
                     className="form-control"
                     value={data.username}
@@ -138,7 +161,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   />
                 </div>
                 <div className="mb-2">
-                  <label>Email</label>
+                  <label>Email <span className="text-danger">*</span></label>
                   <input
                     className="form-control"
                     value={data.email}
@@ -147,7 +170,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                 </div>
                 <div className="row mb-2">
                   <div className="col">
-                    <label>First name</label>
+                    <label>First name <span className="text-danger">*</span></label>
                     <input
                       className="form-control"
                       value={data.first_name}
@@ -177,7 +200,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   </select>
                 </div>
                 <div className="mb-2">
-                  <label>Password</label>
+                  <label>Password <span className="text-danger">*</span></label>
                   <input
                     className="form-control"
                     type="password"
@@ -191,7 +214,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
               <div>
                 <h6>Staff details (optional)</h6>
                 <div className="mb-2">
-                  <label>Phone</label>
+                  <label>Phone <span className="text-danger">*</span></label>
                   <input
                     className="form-control"
                     value={data.staff?.phone || ""}
@@ -201,7 +224,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   />
                 </div>
                 <div className="mb-2">
-                  <label>Blood group</label>
+                  <label>Blood group <span className="text-danger">*</span></label>
                   <select
                     className="form-select"
                     value={data.staff?.blood_group || ""}
@@ -220,9 +243,25 @@ export default function UserWizard({ show, onClose, onCreated }) {
                     <option value="O-">O-</option>
                   </select>
                 </div>
+                <div className="mb-2">
+                  <label>Gender <span className="text-secondary">(not submitted)</span></label>
+                  <select
+                    className="form-select"
+                    value={data.staff?.gender || ""}
+                    onChange={(e) =>
+                      changeNested("staff", { gender: e.target.value })
+                    }
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
                 <div className="row">
                   <div className="col">
-                    <label>DOB</label>
+                    <label>DOB <span className="text-danger">*</span></label>
                     <input
                       className="form-control"
                       type="date"
@@ -233,7 +272,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                     />
                   </div>
                   <div className="col">
-                    <label>Hire date</label>
+                    <label>Hire date <span className="text-danger">*</span></label>
                     <input
                       className="form-control"
                       type="date"
@@ -245,7 +284,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   </div>
                 </div>
                 <div className="mb-2">
-                  <label>Address</label>
+                  <label>Address <span className="text-danger">*</span></label>
                   <textarea
                     className="form-control"
                     value={data.staff?.address || ""}

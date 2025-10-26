@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                     <h6 className="m-0 font-weight-bold text-primary">System Reports</h6>
                   </div>
                   <div className="card-body">
-                    <Reports refreshKey={refreshKey} />
+                    {/* <Reports refreshKey={refreshKey} /> */}
                   </div>
                 </div>
               </div>

@@ -8,6 +8,9 @@ import {
 import AdminForm from "./AdminForm";
 import ConfirmDialog from "../../ui/ConfirmDialog";
 import { NotificationContext } from "../../context/NotificationContext";
+import { IoBagAddSharp } from "react-icons/io5";
+import { FaEdit } from "react-icons/fa";
+import { MdDeleteForever } from "react-icons/md";
 
 export default function SpecializationTable() {
   const [items, setItems] = useState([]);
@@ -49,9 +52,73 @@ export default function SpecializationTable() {
   return (
     <div>
       <h5>Specializations</h5>
-      <button className="btn btn-primary mb-2" onClick={openAdd}>
-        Add
+      <button className="add-user-btn" onClick={openAdd}>
+        <IoBagAddSharp />Add
       </button>
+      <style>
+        {`
+          .add-user-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            border-radius: 8px;
+            margin:2px;
+            padding: 8px 18px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .add-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: #2ca9edff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
+          .cus-user-btn {
+            background: linear-gradient(135deg, #009ef3ff 0%, #0091ffff 100%);
+            color: #fff;
+            border: none;
+            margin:2px;
+            font-weight: 400;
+            border-radius: 8px;
+            padding: 4px 18px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .cus-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #0858ecff 0%, #3054f4ff 100%);
+            color: #ffffffff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
+          .cu-user-btn {
+            background: linear-gradient(135deg, #e14343ff 0%, #e53d3dff 100%);
+            color: #fff;
+            border: none;
+            margin:2px;
+            font-weight: 400;
+            border-radius: 8px;
+            padding: 4px 18px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .cu-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #ec0808ff 0%, #f43030ff 100%);
+            color: #ffffffff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
+        `}
+      </style>
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -70,16 +137,16 @@ export default function SpecializationTable() {
                 <td>{it.name}</td>
                 <td>
                   <button
-                    className="btn btn-secondary btn-sm me-2"
+                    className="cus-user-btn"
                     onClick={() => openEdit(it)}
                   >
-                    Edit
+                    <FaEdit />Edit
                   </button>
                   <button
-                    className="btn btn-danger btn-sm"
+                    className="cu-user-btn"
                     onClick={() => handleDelete(it)}
                   >
-                    Delete
+                    <MdDeleteForever />Delete
                   </button>
                 </td>
               </tr>

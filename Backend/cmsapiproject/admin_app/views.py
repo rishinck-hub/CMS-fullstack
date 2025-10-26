@@ -149,3 +149,32 @@ class DashboardView(APIView):
             })
             
         return Response(dashboard_data)
+
+from django.core.mail import send_mail
+
+def send_welcome_email(user, password):
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    subject = "Welcome to the Clinic Management System"
+    message = f"""
+Hi {full_name or user.username},
+
+Your account has been created!
+
+Username: {user.username}
+Password: {password}
+Role: {user.role}
+Name: {full_name}
+
+You can now login to your account.
+
+Please change your password after your first login.
+
+- Clinic Management admin
+    """
+    send_mail(
+        subject,
+        message,
+        'admin@yclinicMs.com',  # Replace with your sender address
+        [user.email],
+        fail_silently=False,
+    )

@@ -164,6 +164,26 @@ export default function UserManagementTable({ onDataChange }) {
             color: #ffffffff;
             transform: translateY(-1.5px) scale(1.03);
           }
+          .cu-user-btn {
+            background: linear-gradient(135deg, #e14343ff 0%, #e53d3dff 100%);
+            color: #fff;
+            border: none;
+            margin:2px;
+            font-weight: 400;
+            border-radius: 8px;
+            padding: 4px 18px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.11);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.18s;
+          }
+          .cu-user-btn:hover, .add-user-btn:focus {
+            background: linear-gradient(135deg, #ec0808ff 0%, #f43030ff 100%);
+            color: #ffffffff;
+            transform: translateY(-1.5px) scale(1.03);
+          }
         `}
       </style>
 
@@ -313,7 +333,7 @@ export default function UserManagementTable({ onDataChange }) {
                       <MdLockReset />Reset Password
                     </button>
                     <button
-                      className="cus-user-btn mb-2"
+                      className="cu-user-btn"
                       onClick={() => handleDelete(user.id)}
                     >
                       <MdDeleteForever />Delete

@@ -155,3 +155,11 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
 }
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "rishinck10@gmail.com"        # The Gmail actually sending
+EMAIL_HOST_PASSWORD = "xxdx ffrq pzsn uxch"       # The *App Password* generated for Gmail
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "admin@clinicMs.com"
