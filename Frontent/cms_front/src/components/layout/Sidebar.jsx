@@ -32,6 +32,7 @@ export default function Sidebar({ className = "" }) {
         { path: `${basePath}/dashboard`, label: 'Dashboard', icon: 'bi-speedometer2' },
         { path: `${basePath}/patients`, label: 'Patients', icon: 'bi-people' },
         { path: `${basePath}/appointments`, label: 'Appointments', icon: 'bi-calendar-check' },
+        { path: `${basePath}/billing`, label: 'Billing', icon: 'bi-receipt' },
       ];
     } else if (hasRole('Pharmacist')) {
       return [

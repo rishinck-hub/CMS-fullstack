@@ -56,7 +56,17 @@ class StaffSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Staff must be at least 18 years old.")
         return value
 
+# add a lightweight nested serializer for user representation (for doctor lists)
+class UserBriefSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email')
+
+
 class DoctorSerializer(serializers.ModelSerializer):
+    # return nested user info and nested specialization for easier frontend use
+    user = UserBriefSerializer(read_only=True)
+    specialization = SpecializationSerializer(read_only=True)
     class Meta:
         model = Doctor
         fields = '__all__'

@@ -1,180 +1,256 @@
-import React, { useState, useEffect, useContext } from "react";
-import StatCard from "../../ui/StatCard";
-import AppointmentTable from "./AppointmentTable";
-import PatientTable from "./PatientTable";
-import BillingTable from "./BillingTable";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { 
+  FaUserInjured, 
+  FaCalendarAlt, 
+  FaFileInvoiceDollar, 
+  FaChartLine,
+  FaUsers,
+  FaCalendarCheck,
+  FaMoneyBillWave
+} from "react-icons/fa";
+import { GiMedicines } from "react-icons/gi";
+import { BsGraphUp } from "react-icons/bs";
 import Navbar from "../layout/Navbar";
 import Sidebar from "../layout/Sidebar";
-import {
-  fetchPatients,
-  fetchAppointments,
-  fetchBills,
-  calculateDashboardStats,
+import { 
+  fetchPatients, 
+  fetchAppointments, 
+  fetchBills 
 } from "../../services/receptionistService";
-import { useAuth } from "../../hooks/useRole";
-import { NotificationContext } from "../../context/NotificationContext";
+import "./ReceptionistDashboard.css";
 
 export default function ReceptionistDashboard() {
-  const [patients, setPatients] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [stats, setStats] = useState([]);
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    pendingBills: 0
+  });
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { user } = useAuth();
-  const { showNotification } = useContext(NotificationContext);
-
+  // Fetch dashboard data from API
   useEffect(() => {
-    loadDashboardData();
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch all required data in parallel
+        const [patients, appointments, bills] = await Promise.all([
+          fetchPatients(),
+          fetchAppointments({ date: today }),
+          fetchBills({ is_paid: false }) // Get only pending bills
+        ]);
+        
+        // Get recent patients (last 3 registered)
+        const recentPatients = patients
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 3)
+          .map(patient => ({
+            id: patient.id,
+            type: 'patient',
+            name: `${patient.first_name} ${patient.last_name}`,
+            action: 'registered',
+            time: new Date(patient.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+
+        // Get recent appointments (today's appointments)
+        const recentAppointments = appointments
+          .slice(0, 2)
+          .map(appt => ({
+            id: `appt-${appt.id}`,
+            type: 'appointment',
+            name: `${appt.patient_name || 'Patient'}`,
+            time: new Date(appt.appointment_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: appt.status || 'scheduled'
+          }));
+
+        // Update stats with actual counts
+        setStats({
+          totalPatients: patients.length,
+          todayAppointments: appointments.length,
+          pendingBills: bills.length
+        });
+        
+        // Combine recent activities and sort by time
+        setRecentActivity([
+          ...recentPatients,
+          ...recentAppointments
+        ].sort((a, b) => new Date(b.time) - new Date(a.time)));
+        
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Set all counts to 0 if there's an error
+        setStats({
+          totalPatients: 0,
+          todayAppointments: 0,
+          pendingBills: 0
+        });
+        
+        // Show error state in recent activity
+        setRecentActivity([
+          { 
+            id: 'error', 
+            type: 'error', 
+            name: 'Error loading data', 
+            message: 'Could not fetch recent activity', 
+            time: 'Now' 
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
-  // Load all data in parallel
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [patientData, appointmentData, billData] = await Promise.all([
-        fetchPatients(),
-        fetchAppointments(),
-        fetchBills(),
-      ]);
+  const StatCard = ({ icon, title, value, color, iconBg }) => (
+  <div className="stat-card">
+    <div className="stat-icon" style={{ backgroundColor: iconBg, color: color }}>
+      {icon}
+    </div>
+    <div className="stat-info">
+      <div className="stat-title">{title}</div>
+      <div className="stat-value">{value}</div>
+    </div>
+  </div>
+);
 
-      setPatients(patientData);
-      setAppointments(appointmentData);
-      setBills(billData);
+  const FeatureCard = ({ icon, title, description, btnText, onClick, color }) => (
+    <div className="feature-card" onClick={onClick}>
+      <div className="feature-icon" style={{ color }}>
+        {icon}
+      </div>
+      <h4>{title}</h4>
+      <p>{description}</p>
+      <button 
+        className="btn-feature"
+        style={{ backgroundColor: color }}
+      >
+        {btnText}
+      </button>
+    </div>
+  );
 
-      const calculatedStats = calculateDashboardStats(
-        patientData,
-        appointmentData,
-        billData
-      );
-
-      setStats([
-        {
-          title: "Total Patients",
-          value: calculatedStats.total_patients,
-          icon: "bi bi-person-heart",
-          color: "#4e73df",
-        },
-        {
-          title: "Today’s Appointments",
-          value: calculatedStats.today_appointments,
-          icon: "bi bi-calendar-event",
-          color: "#1cc88a",
-        },
-        {
-          title: "Pending Bills",
-          value: calculatedStats.pending_bills,
-          icon: "bi bi-cash-stack",
-          color: "#f6c23e",
-        },
-      ]);
-    } catch (error) {
-      console.error(error);
-      showNotification("Failed to load dashboard data", "danger");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-vh-100 bg-light">
+    <div className="dashboard-container">
       <Navbar />
       <div className="d-flex">
         <Sidebar />
-        <div className="flex-grow-1">
-          {/* Header */}
-          <div className="bg-white shadow-sm border-bottom">
-            <div className="container-fluid py-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h2 className="mb-1">Receptionist Dashboard</h2>
-                  <p className="text-muted mb-0">Welcome back, {user?.username}</p>
-                </div>
-                <div>
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={loadDashboardData}
-                    disabled={loading}
-                  >
-                    {loading ? "Refreshing..." : "Refresh"}
-                  </button>
-                </div>
+        <div className="main-content">
+          <div className="dashboard-header">
+            <h1>Receptionist Dashboard</h1>
+            <p className="text-muted">Welcome back! Here's what's happening today.</p>
+          </div>
+
+          {/* Stats Overview */}
+          <div className="stats-container">
+            <StatCard 
+              icon={<FaUsers size={24} />} 
+              title="Total Patients" 
+              value={stats.totalPatients} 
+              color="#4e73df" 
+              iconBg="#e3ebfc"
+            />
+            <StatCard 
+              icon={<FaCalendarCheck size={24} />} 
+              title="Today's Appointments" 
+              value={stats.todayAppointments} 
+              color="#1cc88a" 
+              iconBg="#d1f3e8"
+            />
+            <StatCard 
+              icon={<FaFileInvoiceDollar size={24} />} 
+              title="Pending Bills" 
+              value={stats.pendingBills} 
+              color="#f6c23e" 
+              iconBg="#fef7e6"
+            />
+          </div>
+
+          {/* Quick Actions */}
+          <div className="features-container">
+            <h3 className="section-title">Quick Actions</h3>
+            <div className="row g-4">
+              <div className="col-md-4">
+                <FeatureCard
+                  icon={<FaUserInjured size={32} />}
+                  title="Patient Management"
+                  description="Manage patient records, view history, and update information"
+                  btnText="Manage Patients"
+                  color="#4e73df"
+                  onClick={() => navigate("/receptionist/patients")}
+                />
+              </div>
+              <div className="col-md-4">
+                <FeatureCard
+                  icon={<FaCalendarAlt size={32} />}
+                  title="Appointments"
+                  description="Schedule, view, and manage doctor appointments"
+                  btnText="View Appointments"
+                  color="#1cc88a"
+                  onClick={() => navigate("/receptionist/appointments")}
+                />
+              </div>
+              <div className="col-md-4">
+                <FeatureCard
+                  icon={<FaFileInvoiceDollar size={32} />}
+                  title="Billing & Invoices"
+                  description="Generate and manage patient bills and invoices"
+                  btnText="Manage Billing"
+                  color="#f6c23e"
+                  onClick={() => navigate("/receptionist/billing")}
+                />
               </div>
             </div>
           </div>
 
-          {/* Stats Section */}
-          <div className="container-fluid py-4">
-            <div className="row mb-4">
-              {loading ? (
-                <div className="col-12 text-center py-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+          {/* Recent Activity */}
+          <div className="recent-activity mt-4">
+            <div className="card shadow-sm">
+              <div className="card-header bg-white">
+                <h5 className="mb-0">Recent Activity</h5>
+              </div>
+              <div className="card-body">
+                {recentActivity.map(activity => (
+                  <div key={activity.id} className="activity-item d-flex align-items-center mb-3">
+                    <div className={`activity-icon me-3 ${activity.type}`}>
+                      {activity.type === 'appointment' && <FaCalendarAlt />}
+                      {activity.type === 'bill' && <FaFileInvoiceDollar />}
+                      {activity.type === 'patient' && <FaUserInjured />}
+                    </div>
+                    <div className="activity-details">
+                      <p className="mb-0 fw-bold">
+                        {activity.name}
+                        {activity.type === 'bill' && ` - $${activity.amount}`}
+                        {activity.type === 'patient' && ` - ${activity.action}`}
+                      </p>
+                      <small className="text-muted">{activity.time || 'Just now'}</small>
+                    </div>
+                    {activity.status && (
+                      <span className={`badge ms-auto ${activity.status === 'completed' ? 'bg-success' : 'bg-warning'}`}>
+                        {activity.status}
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-2 text-muted">Loading dashboard data...</p>
-                </div>
-              ) : (
-                stats.map((stat, idx) => (
-                  <div className="col-xl-3 col-md-6 mb-4" key={idx}>
-                    <StatCard
-                      title={stat.title}
-                      value={stat.value}
-                      icon={stat.icon}
-                      color={stat.color}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Appointments Section */}
-            <div className="row mb-4">
-              <div className="col-12">
-                <div className="card shadow">
-                  <div className="card-header py-3">
-                    <h6 className="m-0 font-weight-bold text-primary">Today’s Appointments</h6>
-                  </div>
-                  <div className="card-body">
-                    <AppointmentTable
-                      appointments={appointments}
-                      onDataChange={loadDashboardData}
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
-
-            {/* Patients Section */}
-            <div className="row mb-4">
-              <div className="col-12">
-                <div className="card shadow">
-                  <div className="card-header py-3">
-                    <h6 className="m-0 font-weight-bold text-primary">Patient Records</h6>
-                  </div>
-                  <div className="card-body">
-                    <PatientTable
-                      patients={patients}
-                      onDataChange={loadDashboardData}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Billing Section */}
-            <div className="row mb-4">
-              <div className="col-12">
-                <div className="card shadow">
-                  <div className="card-header py-3">
-                    <h6 className="m-0 font-weight-bold text-primary">Billing Records</h6>
-                  </div>
-                  <div className="card-body">
-                    <BillingTable bills={bills} onDataChange={loadDashboardData} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>

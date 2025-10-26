@@ -3,7 +3,7 @@ from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import User, Specialization, Staff, Doctor
 from .serializers import UserSerializer, SpecializationSerializer, StaffSerializer, DoctorSerializer
-from common.permissions import IsDoctor, IsPharmacist, IsAdmin, IsReceptionist 
+from common.permissions import IsDoctor, IsPharmacist, IsAdmin, IsReceptionist ,IsAdminOrReceptionist
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrReceptionist]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_active']
     search_fields = ['username', 'email', 'first_name', 'last_name']
@@ -22,17 +22,17 @@ class UserViewSet(viewsets.ModelViewSet):
 class SpecializationViewSet(viewsets.ModelViewSet):
     queryset = Specialization.objects.all()
     serializer_class = SpecializationSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrReceptionist]
 
 class StaffViewSet(viewsets.ModelViewSet):
     queryset = Staff.objects.all()
     serializer_class = StaffSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrReceptionist]
 
 class DoctorViewSet(viewsets.ModelViewSet):
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOrReceptionist]
 
 
 class MeView(APIView):
@@ -64,7 +64,7 @@ class MeView(APIView):
 
 class CreateUserWithProfiles(APIView):
     """Create a User and optional Staff/Doctor records atomically."""
-    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated, IsAdminOrReceptionist]
 
     def post(self, request):
         from .serializers import UserWithProfilesSerializer
