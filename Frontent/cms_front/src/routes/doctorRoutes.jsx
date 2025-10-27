@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import DoctorHome from "../pages/doctor/DoctorHome";
 import Consultations from "../pages/doctor/Consultations";
 import Schedule from "../pages/doctor/Schedule";
+import PrescriptionHistory from "../pages/doctor/PrescriptionHistory";
 
 export default function DoctorRoutes() {
   return (
@@ -12,6 +13,7 @@ export default function DoctorRoutes() {
       <Route path="/queue" element={<DoctorHome />} />
       <Route path="/consultations" element={<Consultations />} />
       <Route path="/schedule" element={<Schedule />} />
+      <Route path="/prescriptions" element={<PrescriptionHistory />} />
     </Routes>
   );
 }

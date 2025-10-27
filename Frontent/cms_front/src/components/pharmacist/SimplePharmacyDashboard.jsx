@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
 
 const SimplePharmacyDashboard = () => {
   const [stats, setStats] = useState({
@@ -20,14 +21,14 @@ const SimplePharmacyDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/pharmacist/medicinebilling/dashboard_stats/');
-      const data = await response.json();
+      const response = await api.get('/pharmacist/medicinebilling/dashboard_stats/');
+      const data = response.data;
       
-      setStats(data.stats);
+      setStats(data.stats || {});
       setLowStockItems(data.lowStockItems || []);
     } catch (err) {
       console.error('Error loading dashboard:', err);
-      setError('Failed to load dashboard data');
+      setError(`Failed to load dashboard data: ${err.response?.data?.detail || err.message}`);
     } finally {
       setLoading(false);
     }

@@ -40,16 +40,16 @@ class Billing(models.Model):
     total_fee = models.DecimalField(max_digits=10, decimal_places=2)
     consultation_fee = models.DecimalField(max_digits=8, decimal_places=2)
     medicine_fee = models.DecimalField(max_digits=8, decimal_places=2)
-    created_by = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
+    is_paid = models.BooleanField(default=False)
+    created_by = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, related_name='bills_created')
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # derive consultation fee from the appointment's doctor
-        try:
-            self.consultation_fee = self.appointment.doctor.consultation_fee
-        except Exception:
-            # if no doctor or consultation fee, leave as provided or zero
-            if not self.consultation_fee:
+        # derive consultation fee from the appointment's doctor if not provided
+        if not self.consultation_fee:
+            try:
+                self.consultation_fee = self.appointment.doctor.consultation_fee
+            except Exception:
                 self.consultation_fee = 0
         # total fee is consultation + medicine
         self.total_fee = (self.consultation_fee or 0) + (self.medicine_fee or 0)

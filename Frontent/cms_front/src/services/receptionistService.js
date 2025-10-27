@@ -30,12 +30,10 @@ export async function fetchBill(id) {
 export async function addBill(payload) {
   try {
     const { data } = await api.post("/receptionist/billing/", {
-      appointment_id:   Number(payload.appointment_id),
+      appointment:      Number(payload.appointment || payload.appointment_id),
       consultation_fee: Number(payload.consultation_fee) || 0,
       medicine_fee:     Number(payload.medicine_fee)     || 0,
-      total_fee:        Number(payload.total_fee)        || 0,
-      is_paid:          Boolean(payload.is_paid),
-      timestamp:        payload.timestamp || new Date().toISOString(),
+      is_paid:          payload.is_paid || false,
     });
     return data;
   } catch (e) {
@@ -47,12 +45,10 @@ export async function addBill(payload) {
 export async function updateBill(id, payload) {   // ← was missing
   try {
     const { data } = await api.put(`/receptionist/billing/${id}/`, {
-      ...payload,
-      appointment_id:   Number(payload.appointment_id),
+      appointment:      Number(payload.appointment || payload.appointment_id),
       consultation_fee: Number(payload.consultation_fee) || 0,
       medicine_fee:     Number(payload.medicine_fee)     || 0,
-      total_fee:        Number(payload.total_fee)        || 0,
-      is_paid:          Boolean(payload.is_paid),
+      is_paid:          payload.is_paid || false,
     });
     return data;
   } catch (e) {

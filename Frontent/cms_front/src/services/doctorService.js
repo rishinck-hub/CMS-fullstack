@@ -6,7 +6,11 @@ export const doctorService = {
   },
 
   async getAppointments() {
-    return api.get("/doctor/appointments");
+    return api.get("/doctor/appointments/");
+  },
+
+  async getTodayAppointments() {
+    return api.get("/doctor/appointments/today/");
   },
 
   async getDashboardData() {
@@ -14,14 +18,22 @@ export const doctorService = {
   },
 
   async createConsultation(data) {
-    return api.post("/doctor/consultations", data);
+    return api.post("/doctor/consultations/", data);
   },
 
   async createPrescription(data) {
-    return api.post("/doctor/prescriptions", data);
+    return api.post("/doctor/prescriptions/", data);
+  },
+
+  async addMedicineToPrescription(prescriptionId, medicineData) {
+    return api.post(`/doctor/prescriptions/${prescriptionId}/add_medicine/`, medicineData);
   },
 
   async updateAppointment(id, data) {
-    return api.patch(`/doctor/appointments/${id}`, data);
+    return api.patch(`/doctor/appointments/${id}/`, data);
+  },
+
+  async getPrescriptions() {
+    return api.get("/doctor/prescriptions");
   }
 };

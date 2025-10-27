@@ -17,42 +17,63 @@ export default function UserDetailsModal({
   const [doctor, setDoctor] = useState(null);
   const [specializations, setSpecializations] = useState([]);
 
+  // normalize helper: user can be object {id,...} or just id/username
+  function normalizeId(val) {
+    if (val && typeof val === "object") return val.id;
+    return val;
+  }
+
+  // specialization label: can be object or id
+  function specLabel(spec) {
+    if (!spec) return "-";
+    if (typeof spec === "object") return spec.name || "-";
+    const s = specializations.find((x) => String(x.id) === String(spec));
+    return s ? s.name : spec;
+  }
+
   useEffect(() => {
-    if (!show) return;
+    if (!show || !user) return;
     let mounted = true;
+
     async function load() {
       try {
+        // If your service supports query params, you can pass { user: user.id } to reduce payload
         const [staffs, doctors, specs] = await Promise.all([
           fetchStaffs(),
           fetchDoctors(),
           fetchSpecializations(),
         ]);
         if (!mounted) return;
-        const s = staffs.find((x) => {
-          if (!x) return false;
-          // staff.user may be id or object
+
+        // robust match for staff
+        const s = (staffs || []).find((x) => {
+          const uid = normalizeId(x?.user);
           return (
-            x.user &&
-            (x.user.id === user.id ||
-              x.user === user.id ||
-              x.user === user.username)
+            uid &&
+            (String(uid) === String(user.id) ||
+              String(uid) === String(user.username))
           );
         });
-        const d = doctors.find(
-          (x) =>
-            x &&
-            x.user &&
-            (x.user.id === user.id ||
-              x.user === user.id ||
-              x.user === user.username)
-        );
+
+        // robust match for doctor
+        const d = (doctors || []).find((x) => {
+          const uid = normalizeId(x?.user);
+          return (
+            uid &&
+            (String(uid) === String(user.id) ||
+              String(uid) === String(user.username))
+          );
+        });
+
         setStaff(s || null);
         setDoctor(d || null);
         setSpecializations(specs || []);
       } catch (err) {
-        // ignore
+        // ignore or log if needed
+        // console.error("UserDetailsModal load error", err);
       }
     }
+
     load();
     return () => {
       mounted = false;
@@ -60,11 +81,6 @@ export default function UserDetailsModal({
   }, [show, user]);
 
   if (!show || !user) return null;
-
-  function specName(id) {
-    const s = specializations.find((x) => String(x.id) === String(id));
-    return s ? s.name : id;
-  }
 
   return (
     <div
@@ -78,29 +94,35 @@ export default function UserDetailsModal({
             <h5 className="modal-title">User details: {user.username}</h5>
             <button className="btn-close" onClick={onClose} />
           </div>
+
           <div className="modal-body">
             <h6>User</h6>
             <dl className="row">
               <dt className="col-3">Username</dt>
               <dd className="col-9">{user.username}</dd>
+
               <dt className="col-3">Email</dt>
               <dd className="col-9">{user.email || "-"}</dd>
+
               <dt className="col-3">Name</dt>
               <dd className="col-9">
                 {(user.first_name || "") + " " + (user.last_name || "")}
               </dd>
+
               <dt className="col-3">Role</dt>
               <dd className="col-9">{user.role}</dd>
+
               <dt className="col-3">Active</dt>
               <dd className="col-9">{user.is_active ? "Yes" : "No"}</dd>
             </dl>
+
             <div className="mb-3">
-              <button
+              {/* <button
                 className="btn btn-primary me-2"
                 onClick={() => onEditUser(user)}
               >
                 Edit user
-              </button>
+              </button> */}
             </div>
 
             <h6>Staff</h6>
@@ -108,22 +130,26 @@ export default function UserDetailsModal({
               <>
                 <dl className="row">
                   <dt className="col-3">Phone</dt>
-                  <dd className="col-9">{staff.phone}</dd>
+                  <dd className="col-9">{staff.phone || "-"}</dd>
+
                   <dt className="col-3">Blood group</dt>
-                  <dd className="col-9">{staff.blood_group}</dd>
+                  <dd className="col-9">{staff.blood_group || "-"}</dd>
+
                   <dt className="col-3">DOB</dt>
-                  <dd className="col-9">{staff.dob}</dd>
+                  <dd className="col-9">{staff.dob || "-"}</dd>
+
                   <dt className="col-3">Hire date</dt>
-                  <dd className="col-9">{staff.hire_date}</dd>
+                  <dd className="col-9">{staff.hire_date || "-"}</dd>
+
                   <dt className="col-3">Address</dt>
-                  <dd className="col-9">{staff.address}</dd>
+                  <dd className="col-9">{staff.address || "-"}</dd>
                 </dl>
-                <button
+                {/* <button
                   className="btn btn-secondary me-2"
                   onClick={() => onEditStaff(staff)}
                 >
                   Edit staff
-                </button>
+                </button> */}
               </>
             ) : (
               <div>No staff record</div>
@@ -134,24 +160,30 @@ export default function UserDetailsModal({
               <>
                 <dl className="row">
                   <dt className="col-3">Specialization</dt>
-                  <dd className="col-9">{specName(doctor.specialization)}</dd>
+                  <dd className="col-9">{specLabel(doctor.specialization)}</dd>
+
                   <dt className="col-3">Experience</dt>
-                  <dd className="col-9">{doctor.experience}</dd>
+                  <dd className="col-9">
+                    {doctor.experience ?? "-"}
+                  </dd>
+
                   <dt className="col-3">Fee</dt>
-                  <dd className="col-9">{doctor.consultation_fee}</dd>
+                  <dd className="col-9">
+                    {doctor.consultation_fee ?? "-"}
+                  </dd>
                 </dl>
-                <button
+                {/* <button
                   className="btn btn-secondary me-2"
                   onClick={() => onEditDoctor(doctor)}
                 >
                   Edit doctor
-                </button>
+                </button> */}
               </>
             ) : (
               <div>No doctor record</div>
             )}
           </div>
-          {console.log('User in modal:', user)}
+
           <div className="modal-footer">
             <button className="btn btn-secondary" onClick={onClose}>
               Close

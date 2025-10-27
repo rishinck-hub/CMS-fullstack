@@ -140,46 +140,74 @@ class AppointmentSerializer(serializers.ModelSerializer):
 # ===================== BILLING SERIALIZER =====================
 
 class BillingSerializer(serializers.ModelSerializer):
+    # Read-only fields for display
     appointment_id = serializers.IntegerField(source='appointment.id', read_only=True)
     created_by_id = serializers.IntegerField(source='created_by.id', read_only=True)
+    
+    # Writable field for creating/updating bills
+    appointment = serializers.PrimaryKeyRelatedField(
+        queryset=Appointment.objects.all()
+    )
 
     class Meta:
         model = Billing
         fields = [
             'id',
+            'appointment',
+            'appointment_id',
             'consultation_fee',
             'medicine_fee',
-            'total_fee',    
+            'total_fee',
+            'is_paid',
             'timestamp',
-            'appointment_id',
             'created_by_id',
         ]
-        read_only_fields = ('consultation_fee', 'total_fee')
+        read_only_fields = ('total_fee', 'timestamp')
+
+    def validate_consultation_fee(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Consultation fee must be non-negative.")
+        return value
+
+    def validate_medicine_fee(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Medicine fee must be non-negative.")
+        return value
 
     def validate(self, data):
-        # Safely obtain values: prefer incoming data, fall back to instance values (for updates), else 0
-        instance = getattr(self, 'instance', None)
-        def get_val(key, default=0):
-            if key in data:
-                return data[key]
-            if instance is not None:
-                return getattr(instance, key, default)
-            return default
-
-        consultation = get_val('consultation_fee', 0)
-        medicine = get_val('medicine_fee', 0)
-        total = get_val('total_fee', consultation + medicine)
-
-        # Ensure numeric types for comparisons
-        try:
-            consultation = float(consultation)
-            medicine = float(medicine)
-            total = float(total)
-        except (TypeError, ValueError):
-            raise serializers.ValidationError("Fees must be numeric values.")
-
-        if consultation < 0 or medicine < 0:
-            raise serializers.ValidationError("Fees must be non-negative numbers.")
-        if abs(total - (consultation + medicine)) > 0.01:
-            raise serializers.ValidationError("Total fee must be sum of consultation and medicine fees.")
+        # Enforce one bill per appointment
+        appointment = data.get('appointment')
+        if appointment:
+            # Check if a bill already exists for this appointment
+            existing_bill = Billing.objects.filter(appointment=appointment)
+            
+            # If updating, exclude the current instance
+            if self.instance:
+                existing_bill = existing_bill.exclude(pk=self.instance.pk)
+            
+            # If creating a new bill and one already exists, raise an error
+            if existing_bill.exists():
+                raise serializers.ValidationError({
+                    'appointment': 'A bill already exists for this appointment. One appointment can only have one bill.'
+                })
+        
+        # Auto-calculate consultation fee from doctor if not provided
+        if 'consultation_fee' not in data and not self.instance:
+            try:
+                if appointment:
+                    data['consultation_fee'] = appointment.doctor.consultation_fee
+            except Exception:
+                pass
+        
+        # Ensure we have values
+        consultation = data.get('consultation_fee', 0)
+        medicine = data.get('medicine_fee', 0)
+        
+        # Calculate total (this will be overridden by model save, but we validate here)
+        if self.instance:
+            consultation = consultation if 'consultation_fee' in data else self.instance.consultation_fee
+            medicine = medicine if 'medicine_fee' in data else self.instance.medicine_fee
+        
+        data['total_fee'] = float(consultation) + float(medicine)
+        
         return data

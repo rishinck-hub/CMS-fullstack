@@ -26,6 +26,7 @@ export default function Sidebar({ className = "" }) {
         { path: `${basePath}/dashboard`, label: 'Dashboard', icon: 'bi-speedometer2' },
         { path: `${basePath}/patients`, label: 'Patients', icon: 'bi-people' },
         { path: `${basePath}/consultations`, label: 'Consultations', icon: 'bi-clipboard-pulse' },
+        { path: `${basePath}/prescriptions`, label: 'Prescription History', icon: 'bi-prescription' },
       ];
     } else if (hasRole('Receptionist')) {
       return [
@@ -37,8 +38,9 @@ export default function Sidebar({ className = "" }) {
     } else if (hasRole('Pharmacist')) {
       return [
         { path: `${basePath}/dashboard`, label: 'Dashboard', icon: 'bi-speedometer2' },
-        { path: `${basePath}/medicines`, label: 'Medicines', icon: 'bi-capsule' },
-        { path: `${basePath}/prescriptions`, label: 'Prescriptions', icon: 'bi-prescription' },
+        { path: `${basePath}/medicines`, label: 'Medicine Management', icon: 'bi-capsule' },
+        { path: `${basePath}/prescriptions`, label: 'Prescription Management', icon: 'bi-prescription' },
+        { path: `${basePath}/billing`, label: 'Billing Management', icon: 'bi-receipt' },
       ];
     }
     return [];

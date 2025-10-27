@@ -18,6 +18,9 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'role', 'is_active', 'date_joined']
     ordering = ['username']
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = True  # let PUT behave like PATCH for convenience
+        return super().update(request, *args, **kwargs)
 
 class SpecializationViewSet(viewsets.ModelViewSet):
     queryset = Specialization.objects.all()

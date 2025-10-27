@@ -8,6 +8,11 @@ import AddMedicine from "../components/pharmacist/AddMedicine";
 import BillingManagement from "../components/pharmacist/BillingManagement";
 import PrescriptionViewer from "../components/pharmacist/PrescriptionViewer";
 
+// New management pages
+import MedicineManagementPage from "../pages/pharmacist/MedicineManagement";
+import PrescriptionManagementPage from "../pages/pharmacist/PrescriptionManagement";
+import BillingManagementPage from "../pages/pharmacist/BillingManagement";
+
 // Test/legacy pages
 import TestPharmacistDashboard from "../pages/pharmacist/TestPharmacistDashboard";
 import WorkingDashboard from "../pages/pharmacist/WorkingDashboard";
@@ -33,9 +38,14 @@ export default function PharmacistRoutes() {
 
       {/* Core pharmacy routes */}
       <Route path="dashboard" element={<EnhancedPharmacyDashboard />} />
-      <Route path="medicines" element={<AddMedicine />} />
-      <Route path="billing" element={<BillingManagement />} />
-      <Route path="prescriptions" element={<PrescriptionViewer />} />
+      <Route path="medicines" element={<MedicineManagementPage />} />
+      <Route path="billing" element={<BillingManagementPage />} />
+      <Route path="prescriptions" element={<PrescriptionManagementPage />} />
+      
+      {/* Legacy routes for backward compatibility */}
+      <Route path="old-medicines" element={<AddMedicine />} />
+      <Route path="old-billing" element={<BillingManagement />} />
+      <Route path="old-prescriptions" element={<PrescriptionViewer />} />
 
       {/* Relocated test/demo routes under /pharmacist/... */}
       <Route path="test-pharmacist" element={<TestPharmacistDashboard />} />

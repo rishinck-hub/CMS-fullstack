@@ -1,4 +1,3 @@
-/*  BillingTable.jsx  –  FULL REPLACEMENT (theme-aware + live appointment list)  */
 import React, { useEffect, useState } from "react";
 import { BsReceipt, BsHourglass, BsClipboardData } from "react-icons/bs";
 import {
@@ -6,11 +5,11 @@ import {
   addBill,
   updateBill,
   deleteBill,
-  fetchAppointments   // ← 1.  IMPORT
+  fetchAppointments // ← 1.  IMPORT
 } from "../../services/receptionistService";
 
 export default function BillingTable({ appointments = [], patients = [] }) {
-  /* ---------- state ---------- */
+  // ---------- state ----------
   const [bills, setBills] = useState([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -19,7 +18,7 @@ export default function BillingTable({ appointments = [], patients = [] }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  /*  NEW  –  full appointment list for drop-down  */
+  // NEW – full appointment list for drop-down
   const [apptList, setApptList] = useState([]);
 
   const blank = () => ({
@@ -32,7 +31,7 @@ export default function BillingTable({ appointments = [], patients = [] }) {
   });
   const [form, setForm] = useState(blank());
 
-  /* ---------- life-cycle ---------- */
+  // ---------- life-cycle ----------
   const load = async () => {
     try {
       const data = await fetchBills();
@@ -50,43 +49,71 @@ export default function BillingTable({ appointments = [], patients = [] }) {
 
   useEffect(() => { load(); }, []);
 
-  /*  NEW  –  fetch every appointment once  */
+  // NEW – fetch every appointment once
   useEffect(() => {
     fetchAppointments()
       .then(setApptList)
       .catch(console.error);
   }, []);
 
-  /* ---------- helpers ---------- */
+  // ---------- helpers ----------
   const patientOf = (apptId) => {
     const appt = appointments.find((a) => a.id === apptId) || apptList.find(a => a.id === apptId);
     if (!appt) return {};
     return patients.find((p) => p.id === appt.patient_id) || {};
   };
 
-  /* auto total */
+  // Get appointment IDs that already have bills
+  const appointmentIdsWithBills = bills.map(b => b.appointment);
+
+  // Filter appointments to only show those without bills when creating new
+  const availableAppointments = editing 
+    ? apptList // Show all when editing
+    : apptList.filter(a => !appointmentIdsWithBills.includes(a.id)); // Filter when creating new
+
+  // auto total
   useEffect(() => {
     const c = Number(form.consultation_fee) || 0;
     const m = Number(form.medicine_fee) || 0;
     setForm((f) => ({ ...f, total_fee: (c + m).toFixed(2) }));
   }, [form.consultation_fee, form.medicine_fee]);
 
-  /* ---------- CRUD ---------- */
+  // ---------- CRUD ----------
   const handleSubmit = async () => {
     try {
-      if (editing) await updateBill(editing.id, form);
-      else await addBill(form);
+      if (!form.appointment_id) {
+        alert("Select an appointment for this bill.");
+        return;
+      }
+      const payload = {
+        ...form,
+        appointment: Number(form.appointment_id), // This is what the backend expects
+      };
+      delete payload.appointment_id;
+      if (editing) await updateBill(editing.id, payload);
+      else await addBill(payload);
       setShowForm(false);
       setEditing(null);
       setForm(blank());
       load();
     } catch (e) {
-      alert(e.message || "Save failed");
+      // Handle validation error for duplicate bills
+      let errorMessage = "Save failed";
+      if (e.response?.data?.appointment) {
+        errorMessage = Array.isArray(e.response.data.appointment) 
+          ? e.response.data.appointment[0] 
+          : e.response.data.appointment;
+      } else if (e.response?.data?.detail) {
+        errorMessage = e.response.data.detail;
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      alert(errorMessage);
     }
   };
 
   const handleEdit = (bill) => {
-    setForm({ ...bill, timestamp: bill.timestamp.slice(0, 16) });
+    setForm({ ...bill, appointment_id: bill.appointment, timestamp: bill.timestamp.slice(0, 16) });
     setEditing(bill);
     setShowForm(true);
   };
@@ -103,7 +130,7 @@ export default function BillingTable({ appointments = [], patients = [] }) {
 
   const handlePrint = (bill) => {
     const win = window.open("", "bill", "width=400,height=600");
-    win.document.write(printTemplate(bill, patientOf(bill.appointment_id)));
+    win.document.write(printTemplate(bill, patientOf(bill.appointment)));
     win.document.close();
     win.focus();
     win.print();
@@ -116,20 +143,20 @@ export default function BillingTable({ appointments = [], patients = [] }) {
     };
   };
 
-  /* ---------- search ---------- */
+  // ---------- search ----------
   const filtered = bills.filter((b) => {
-    const p = patientOf(b.appointment_id);
+    const p = patientOf(b.appointment);
     const str = search.toLowerCase();
     return (
       p.first_name?.toLowerCase().includes(str) ||
       p.last_name?.toLowerCase().includes(str) ||
       p.phone?.includes(str) ||
       b.id.toString().includes(str) ||
-      b.appointment_id.toString().includes(str)
+      b.appointment.toString().includes(str)
     );
   });
 
-  /* ---------- empty ---------- */
+  // ---------- empty ----------
   if (!bills.length)
     return (
       <div className="text-center mt-5 text-muted">
@@ -140,7 +167,7 @@ export default function BillingTable({ appointments = [], patients = [] }) {
       </div>
     );
 
-  /* -------------------------------------------------------- */
+  // --------------------------------------------------------
   return (
     <>
       <div className="billing-bg" />
@@ -226,20 +253,25 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                   <div className="row g-3">
                     <div className="col-md-4">
                       <label className="form-label">Appointment *</label>
-                      {/*  NEW  –  live appointment list  */}
                       <select
                         className="form-select"
                         value={form.appointment_id}
-                        onChange={(e) => setForm({ ...form, appointment_id: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, appointment_id: e.target.value })
+                        }
                         disabled={!!editing}
                       >
                         <option value="">Select appointment</option>
-                        {apptList.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            #{a.id} – {a.patient?.first_name} {a.patient?.last_name} &nbsp;
-                            ({new Date(a.date_time).toLocaleString()})
-                          </option>
-                        ))}
+                        {availableAppointments.length === 0 ? (
+                          <option value="" disabled>No available appointments (all have bills)</option>
+                        ) : (
+                          availableAppointments.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              #{a.id} – {a.patient?.first_name} {a.patient?.last_name} &nbsp;
+                              ({new Date(a.date_time).toLocaleString()})
+                            </option>
+                          ))
+                        )}
                       </select>
                     </div>
                     <div className="col-md-4">
@@ -248,7 +280,9 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                         type="number"
                         className="form-control"
                         value={form.consultation_fee}
-                        onChange={(e) => setForm({ ...form, consultation_fee: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, consultation_fee: e.target.value })
+                        }
                       />
                     </div>
                     <div className="col-md-4">
@@ -257,7 +291,9 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                         type="number"
                         className="form-control"
                         value={form.medicine_fee}
-                        onChange={(e) => setForm({ ...form, medicine_fee: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, medicine_fee: e.target.value })
+                        }
                       />
                     </div>
                     <div className="col-md-4">
@@ -275,7 +311,9 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                         type="datetime-local"
                         className="form-control"
                         value={form.timestamp}
-                        onChange={(e) => setForm({ ...form, timestamp: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, timestamp: e.target.value })
+                        }
                       />
                     </div>
                     <div className="col-md-4 d-flex align-items-end">
@@ -284,16 +322,24 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                           className="form-check-input"
                           type="checkbox"
                           checked={form.is_paid}
-                          onChange={(e) => setForm({ ...form, is_paid: e.target.checked })}
+                          onChange={(e) =>
+                            setForm({ ...form, is_paid: e.target.checked })
+                          }
                         />
-                        <label className="form-check-label">Paid immediately</label>
+                        <label className="form-check-label">
+                          Paid immediately
+                        </label>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
-                  <button className="btn btn-sidebar" onClick={handleSubmit}>Save</button>
+                  <button className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-sidebar" onClick={handleSubmit}>
+                    Save
+                  </button>
                 </div>
               </div>
             </div>
@@ -318,7 +364,7 @@ export default function BillingTable({ appointments = [], patients = [] }) {
             </thead>
             <tbody>
               {filtered.map((b, i) => {
-                const p = patientOf(b.appointment_id);
+                const p = patientOf(b.appointment);
                 return (
                   <tr key={b.id}>
                     <td>{i + 1}</td>
@@ -332,17 +378,28 @@ export default function BillingTable({ appointments = [], patients = [] }) {
                       {b.is_paid ? (
                         <span className="badge bg-success">Paid</span>
                       ) : (
-                        <span className="badge bg-warning text-dark">Pending</span>
+                        <span className="badge bg-warning text-dark">
+                          Pending
+                        </span>
                       )}
                     </td>
                     <td>
-                      <button className="btn btn-sm btn-outline-primary me-1" onClick={() => handlePrint(b)}>
+                      <button
+                        className="btn btn-sm btn-outline-primary me-1"
+                        onClick={() => handlePrint(b)}
+                      >
                         Print
                       </button>
-                      <button className="btn btn-sm btn-outline-secondary me-1" onClick={() => handleEdit(b)}>
+                      <button
+                        className="btn btn-sm btn-outline-secondary me-1"
+                        onClick={() => handleEdit(b)}
+                      >
                         Edit
                       </button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(b.id)}>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDelete(b.id)}
+                      >
                         Delete
                       </button>
                     </td>
@@ -352,14 +409,15 @@ export default function BillingTable({ appointments = [], patients = [] }) {
             </tbody>
           </table>
           {!filtered.length && (
-            <div className="text-center py-4 text-muted">No bills match your search</div>
+            <div className="text-center py-4 text-muted">
+              No bills match your search
+            </div>
           )}
         </div>
       </div>
 
       {/* ----------  THEME + BUTTON STYLES  ---------- */}
       <style>{`
-        /* 1. full-page gradient background */
         .billing-bg {
           position: fixed;
           inset: 0;
@@ -387,25 +445,6 @@ export default function BillingTable({ appointments = [], patients = [] }) {
         }
       `}</style>
     </>
-  );
-}
-
-/* ---------- small components ---------- */
-function StatCard({ title, value, icon, color }) {
-  return (
-    <div className="col-md-4">
-      <div className="card border-0 shadow-sm">
-        <div className="card-body d-flex align-items-center">
-          <div className="fs-2 me-3">{icon}</div>
-          <div>
-            <div className="text-muted small">{title}</div>
-            <div className="fs-5 fw-bold" style={{ color }}>
-              {value}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 

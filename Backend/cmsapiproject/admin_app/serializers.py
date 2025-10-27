@@ -1,16 +1,21 @@
 from rest_framework import serializers
 from .models import User, Specialization, Staff, Doctor
 from datetime import date
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'first_name', 'last_name', 'email', 'password', 'role', 'is_active')
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {'password': {'write_only': True,'required':False}}
     def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
+        qs = User.objects.filter(username=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)  # exclude self while updating
+        if qs.exists():
             raise serializers.ValidationError("Username already exists.")
-        return value      
+        return value     
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User(**validated_data)
@@ -64,35 +69,60 @@ class UserBriefSerializer(serializers.ModelSerializer):
 
 
 class DoctorSerializer(serializers.ModelSerializer):
-    # return nested user info and nested specialization for easier frontend use
+    # Read: nested for frontend convenience
     user = UserBriefSerializer(read_only=True)
     specialization = SpecializationSerializer(read_only=True)
+
+    # Write: PK inputs mapped to model fields
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source="user", write_only=True, required=False
+    )
+    specialization_id = serializers.PrimaryKeyRelatedField(
+        queryset=Specialization.objects.all(), source="specialization",
+        write_only=True, required=False
+    )
+
     class Meta:
         model = Doctor
-        fields = '__all__'
+        fields = (
+            'id',
+            'user', 'user_id',
+            'specialization', 'specialization_id',
+            'experience', 'consultation_fee',
+        )
 
     def validate_experience(self, value):
-        if value < 0:
+        if value is not None and value < 0:
             raise serializers.ValidationError("Experience cannot be negative.")
         return value
 
     def validate_consultation_fee(self, value):
-        if value <= 0:
+        if value is not None and value <= 0:
             raise serializers.ValidationError("Consultation fee must be greater than zero.")
         return value
 
     def validate(self, data):
-        # Assuming Doctor.user is linked to a Staff object with dob
-        user = data.get('user')
+        # Resolve the user for both create and update
+        user_obj = data.get('user')
+        if not user_obj and self.instance:
+            user_obj = self.instance.user
+
+        # Require staff with a DOB and 25+ age rule
         try:
-            staff = user.staff
+            staff = user_obj.staff
             dob = staff.dob
+            if not dob:
+                raise serializers.ValidationError(
+                    "Doctor must be linked with staff that has a valid date of birth."
+                )
             today = date.today()
             age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
             if age < 25:
                 raise serializers.ValidationError("Doctor must be at least 25 years old.")
-        except AttributeError:
-            raise serializers.ValidationError("Doctor must be linked with staff that has a valid date of birth.")
+        except Exception:
+            raise serializers.ValidationError(
+                "Doctor must be linked with staff that has a valid date of birth."
+            )
         return data
 
 

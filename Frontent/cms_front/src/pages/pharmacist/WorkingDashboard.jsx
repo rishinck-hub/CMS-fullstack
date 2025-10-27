@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../../src/services/api';
 
 const WorkingDashboard = () => {
   const navigate = useNavigate();
@@ -16,19 +17,15 @@ const WorkingDashboard = () => {
       setLoading(true);
       console.log('Fetching data from API...');
       
-      const response = await fetch('http://localhost:8000/api/pharmacist/medicinebilling/dashboard_stats/');
+      const response = await api.get('/pharmacist/medicinebilling/dashboard_stats/');
       console.log('Response received:', response.status);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Data received:', result);
-        setData(result);
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      const result = response.data;
+      console.log('Data received:', result);
+      setData(result);
     } catch (err) {
       console.error('Error:', err);
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message);
     } finally {
       setLoading(false);
     }

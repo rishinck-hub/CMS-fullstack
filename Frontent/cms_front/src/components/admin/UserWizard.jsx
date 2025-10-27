@@ -9,6 +9,8 @@ export default function UserWizard({ show, onClose, onCreated }) {
   const { showNotification } = useContext(NotificationContext);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const [data, setData] = useState({
     username: "",
     email: "",
@@ -66,75 +68,112 @@ export default function UserWizard({ show, onClose, onCreated }) {
     return age;
   }
 
-  async function submit() {
-    setLoading(true);
-    try {
-      if (!data.username || !/^[a-zA-Z0-9_]{3,}$/.test(data.username)) {
-        throw new Error("Username is required (min 3 chars, only letters, numbers, underscore, no spaces).");
-      }
-      if (!data.email || !/^[\w\.-]+@[\w-]+(\.[\w-]+)+$/.test(data.email)) {
-        throw new Error("Please enter a valid email address.");
-      }
-      if (!data.first_name || !/^[a-zA-Z]+$/.test(data.first_name)) {
-        throw new Error("First name is required and can only contain letters.");
-      }
-      if (
-        !data.password ||
-        data.password.length < 6 ||
-        !/[A-Za-z]/.test(data.password) ||
-        !/\d/.test(data.password)
-      ) {
-        throw new Error("Password must be at least 6 characters and contain both letters and numbers.");
-      }
-      if (data.staff?.phone && !/^[6-9]\d{9}$/.test(data.staff.phone)) {
-        throw new Error("Phone must be 10 digits and start with 6, 7, 8, or 9.");
-      }
-      if (step > 0 && !data.staff?.blood_group) {
-        throw new Error("Blood group is required for staff.");
-      }
-
-      const payload = { ...data };
-
-      if (payload.staff && Object.values(payload.staff).every((v) => !v))
-        delete payload.staff;
-      if (payload.doctor && Object.values(payload.doctor).every((v) => !v))
-        delete payload.doctor;
-
-      // Remove dummy gender from payload before sending to backend
-      if (payload.staff && "gender" in payload.staff) {
-        delete payload.staff.gender;
-      }
-
-      if (payload.staff && payload.staff.dob) {
-        const staffAge = getAge(payload.staff.dob);
-        if (staffAge < 18) {
-          throw new Error("Staff must be at least 18 years old.");
-        }
-      }
-      if (data.role === "Doctor" && payload.staff && payload.staff.dob) {
-        const doctorAge = getAge(payload.staff.dob);
-        if (doctorAge < 25) {
-          throw new Error("Doctors must be at least 25 years old.");
-        }
-      }
-      if (data.role === "Doctor") {
-        const specId = payload.doctor?.specialization;
-        if (!specId) throw new Error("Please select a specialization for doctor");
-      }
-
-      const res = await createUserWithProfiles(payload);
-      showNotification("Created successfully", "success");
-      onCreated && onCreated(res);
-      onClose && onClose();
-    } catch (err) {
-      showNotification(
-        err?.detail || err?.toString() || "Create failed",
-        "danger"
-      );
-    } finally {
-      setLoading(false);
+async function submit() {
+  setLoading(true);
+  try {
+    // Username
+    if (!data.username || !/^[a-zA-Z0-9_]{3,}$/.test(data.username)) {
+      throw new Error("Username is required (min 3 chars, only letters, numbers, underscore, no spaces).");
     }
+    // Email
+    if (!data.email || !/^[\w\.-]+@[\w-]+(\.[\w-]+)+$/.test(data.email)) {
+      throw new Error("Please enter a valid email address.");
+    }
+    // First name
+    if (!data.first_name || !/^[a-zA-Z]+$/.test(data.first_name)) {
+      throw new Error("First name is required and can only contain letters.");
+    }
+    // Password
+    if (
+      !data.password ||
+      data.password.length < 6 ||
+      !/[A-Za-z]/.test(data.password) ||
+      !/\d/.test(data.password)
+    ) {
+      throw new Error("Password must be at least 6 characters and contain both letters and numbers.");
+    }
+    // Phone
+    if (data.staff?.phone && !/^[6-9]\d{9}$/.test(data.staff.phone)) {
+      throw new Error("Phone must be 10 digits and start with 6, 7, 8, or 9.");
+    }
+    // Blood group required once on staff step
+    if (step > 0 && !data.staff?.blood_group) {
+      throw new Error("Blood group is required for staff.");
+    }
+
+    // HIRE DATE VALIDATIONS (presence, not future, not before DOB, >= 18 on hire)
+    if (step > 0) {
+      const hireStr = data.staff?.hire_date || "";
+      if (!hireStr) {
+        throw new Error("Hire date is required for staff.");
+      }
+      const hire = new Date(hireStr);
+      const today = new Date();
+      // normalize to date-only for comparison
+      const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      if (hire > todayMid) {
+        throw new Error("Hire date cannot be in the future.");
+      }
+
+      const dobStr = data.staff?.dob || "";
+      if (dobStr) {
+        const dob = new Date(dobStr);
+        if (hire < dob) {
+          throw new Error("Hire date cannot be before date of birth.");
+        }
+        const eighteenAt = new Date(dob);
+        eighteenAt.setFullYear(dob.getFullYear() + 18);
+        if (hire < eighteenAt) {
+          throw new Error("Hire date must be on or after the 18th birthday.");
+        }
+      }
+    }
+
+    const payload = { ...data };
+
+    // remove empty nested
+    if (payload.staff && Object.values(payload.staff).every((v) => !v)) delete payload.staff;
+    if (payload.doctor && Object.values(payload.doctor).every((v) => !v)) delete payload.doctor;
+
+    // remove dummy gender
+    if (payload.staff && "gender" in payload.staff) {
+      delete payload.staff.gender;
+    }
+
+    // Age checks (based on DOB) if provided
+    if (payload.staff && payload.staff.dob) {
+      const staffAge = getAge(payload.staff.dob);
+      if (staffAge < 18) {
+        throw new Error("Staff must be at least 18 years old.");
+      }
+    }
+
+    // Doctor age rule (if doctor role and dob present)
+    if (data.role === "Doctor" && payload.staff && payload.staff.dob) {
+      const doctorAge = getAge(payload.staff.dob);
+      if (doctorAge < 25) {
+        throw new Error("Doctors must be at least 25 years old.");
+      }
+    }
+
+    // Doctor specialization
+    if (data.role === "Doctor") {
+      const specId = payload.doctor?.specialization;
+      if (!specId) throw new Error("Please select a specialization for doctor");
+    }
+
+    const res = await createUserWithProfiles(payload);
+    showNotification("Created successfully", "success");
+    onCreated && onCreated(res);
+    onClose && onClose();
+  } catch (err) {
+    showNotification(err?.detail || err?.toString() || "Create failed", "danger");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   if (!show) return null;
   return (
@@ -203,10 +242,23 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   <label>Password <span className="text-danger">*</span></label>
                   <input
                     className="form-control"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={data.password}
                     onChange={(e) => change("password", e.target.value)}
+                    autoComplete="new-password"
                   />
+                  <div className="form-check mt-1">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="showPass"
+                      checked={showPassword}
+                      onChange={(e) => setShowPassword(e.target.checked)}
+                    />
+                    <label className="form-check-label" htmlFor="showPass">
+                      Show password
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -244,7 +296,7 @@ export default function UserWizard({ show, onClose, onCreated }) {
                   </select>
                 </div>
                 <div className="mb-2">
-                  <label>Gender <span className="text-secondary">(not submitted)</span></label>
+                  <label>Gender <span className="text-danger">*</span></label>
                   <select
                     className="form-select"
                     value={data.staff?.gender || ""}

@@ -28,6 +28,31 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
   const [specializations, setSpecializations] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // helpers
+  function isValidEmail(v) {
+    return /^[\w.-]+@[\w-]+(\.[\w-]+)+$/.test(v || "");
+  }
+  function isLettersOnly(v) {
+    return /^[A-Za-z]+$/.test(v || "");
+  }
+  function normalizeId(val) {
+    if (val && typeof val === "object") return val.id;
+    return val;
+  }
+  function getAge(dateString) {
+    if (!dateString) return 0;
+    const today = new Date();
+    const dob = new Date(dateString);
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age;
+  }
+  function toDateOnly(d) {
+    const x = new Date(d);
+    return new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  }
+
   useEffect(() => {
     if (!show || !user) return;
     setUserForm({
@@ -45,7 +70,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
     let mounted = true;
     async function loadRelated() {
       try {
-        // fetch full user record first
+        // fetch full user
         let fullUser = null;
         try {
           fullUser = await fetchUser(user.id);
@@ -53,7 +78,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
           fullUser = user;
         }
         if (!mounted) return;
-        // Prefill user form with fetched data or provided user
+
         setUserForm({
           username: fullUser.username || "",
           email: fullUser.email || "",
@@ -61,9 +86,7 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
           last_name: fullUser.last_name || "",
           role: fullUser.role || "",
           is_active:
-            typeof fullUser.is_active === "boolean"
-              ? fullUser.is_active
-              : true,
+            typeof fullUser.is_active === "boolean" ? fullUser.is_active : true,
         });
 
         const [staffs, doctors, specs] = await Promise.all([
@@ -73,7 +96,6 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
         ]);
         if (!mounted) return;
 
-        // Prefer nested staff/doctor on the user object if provided
         const sFromUser =
           fullUser && (fullUser.staff || fullUser.staff_profile || null);
         const dFromUser =
@@ -81,30 +103,33 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
 
         const s =
           sFromUser ||
-          (staffs || []).find(
-            (x) =>
-              x.user &&
-              (x.user.id === user.id ||
-                x.user === user.id ||
-                x.user === user.username)
-          ) ||
+          (staffs || []).find((x) => {
+            const uid = normalizeId(x?.user);
+            return (
+              uid &&
+              (String(uid) === String(user.id) ||
+                String(uid) === String(user.username))
+            );
+          }) ||
           null;
+
         const d =
           dFromUser ||
-          (doctors || []).find(
-            (x) =>
-              x.user &&
-              (x.user.id === user.id ||
-                x.user === user.id ||
-                x.user === user.username)
-          ) ||
+          (doctors || []).find((x) => {
+            const uid = normalizeId(x?.user);
+            return (
+              uid &&
+              (String(uid) === String(user.id) ||
+                String(uid) === String(user.username))
+            );
+          }) ||
           null;
 
         setStaff(s);
         setDoctor(d);
         setSpecializations(specs || []);
       } catch (err) {
-        // ignore
+        // ignore/log
       }
     }
     loadRelated();
@@ -118,21 +143,32 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
   function changeUser(field, value) {
     setUserForm((f) => ({ ...(f || {}), [field]: value }));
   }
-
   function changeStaff(field, value) {
     setStaff((s) => ({ ...(s || {}), [field]: value }));
   }
-
   function changeDoctor(field, value) {
     setDoctor((d) => ({ ...(d || {}), [field]: value }));
   }
+
+  // VALIDATED SAVE HANDLERS
 
   async function saveUser() {
     if (!userForm) return;
     setLoading(true);
     try {
+      // Email
+      if (!isValidEmail(userForm.email)) {
+        throw new Error("Please enter a valid email address.");
+      }
+      // First name
+      if (!userForm.first_name || !isLettersOnly(userForm.first_name)) {
+        throw new Error("First name is required and can only contain letters.");
+      }
+
       const payload = { ...userForm };
-      if (!payload.password) delete payload.password;
+      // ensure no password is sent from the edit modal by mistake
+      delete payload.password;
+
       await updateUser(user.id, payload);
       showNotification("User updated", "success");
       onSaved && onSaved();
@@ -146,8 +182,45 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
   async function saveStaff() {
     setLoading(true);
     try {
-      const payload = { ...staff };
+      const payload = { ...(staff || {}) };
       payload.user = payload.user?.id || payload.user || user.id;
+
+      // Phone
+      if (payload.phone && !/^[6-9]\d{9}$/.test(payload.phone)) {
+        throw new Error("Phone must be 10 digits and start with 6, 7, 8, or 9.");
+      }
+      // Blood group required
+      if (!payload.blood_group) {
+        throw new Error("Blood group is required for staff.");
+      }
+      // Hire date required
+      if (!payload.hire_date) {
+        throw new Error("Hire date is required for staff.");
+      }
+      // Hire date checks
+      const todayMid = toDateOnly(new Date());
+      const hire = toDateOnly(payload.hire_date);
+      if (hire > todayMid) {
+        throw new Error("Hire date cannot be in the future.");
+      }
+
+      if (payload.dob) {
+        const dob = toDateOnly(payload.dob);
+        if (hire < dob) {
+          throw new Error("Hire date cannot be before date of birth.");
+        }
+        // ≥ 18 on hire
+        const eighteenAt = new Date(dob);
+        eighteenAt.setFullYear(dob.getFullYear() + 18);
+        if (hire < eighteenAt) {
+          throw new Error("Hire date must be on or after the 18th birthday.");
+        }
+        // Current age guard too
+        if (getAge(payload.dob) < 18) {
+          throw new Error("Staff must be at least 18 years old.");
+        }
+      }
+
       if (staff && staff.id) {
         await updateStaff(staff.id, payload);
         showNotification("Staff updated", "success");
@@ -166,8 +239,25 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
   async function saveDoctor() {
     setLoading(true);
     try {
-      const payload = { ...doctor };
+      const payload = { ...(doctor || {}) };
       payload.user = payload.user?.id || payload.user || user.id;
+
+      // Specialization required
+      if (!payload.specialization) {
+        throw new Error("Specialization is required for doctor.");
+      }
+      // Experience non-negative
+      if (payload.experience != null && Number(payload.experience) < 0) {
+        throw new Error("Experience cannot be negative.");
+      }
+      // Fee > 0
+      if (
+        payload.consultation_fee != null &&
+        Number(payload.consultation_fee) <= 0
+      ) {
+        throw new Error("Consultation fee must be greater than zero.");
+      }
+
       if (doctor && doctor.id) {
         await updateDoctor(doctor.id, payload);
         showNotification("Doctor updated", "success");
@@ -335,7 +425,6 @@ export default function UserEditModal({ user, show, onClose, onSaved }) {
                       value={staff.address || ""}
                       onChange={(e) => changeStaff("address", e.target.value)}
                     />
-
                     <div className="mt-2">
                       <button
                         className="btn btn-primary"

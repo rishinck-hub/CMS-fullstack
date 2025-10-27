@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 
 const EnhancedPharmacyDashboard = () => {
   const [stats, setStats] = useState({
@@ -26,12 +27,9 @@ const EnhancedPharmacyDashboard = () => {
       setLoading(true);
       setError(null);
       
-      // Load dashboard stats
-      const statsResponse = await fetch('http://localhost:8000/api/pharmacist/medicinebilling/dashboard_stats/');
-      if (!statsResponse.ok) {
-        throw new Error('Failed to load dashboard statistics');
-      }
-      const statsData = await statsResponse.json();
+      // Load dashboard stats - using authenticated api client
+      const statsResponse = await api.get('/pharmacist/medicinebilling/dashboard_stats/');
+      const statsData = statsResponse.data;
       
       setStats(statsData.stats || {
         totalMedicines: 0,
@@ -51,7 +49,7 @@ const EnhancedPharmacyDashboard = () => {
       
     } catch (err) {
       console.error('Error loading dashboard:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(`Failed to load dashboard data: ${err.response?.data?.detail || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -59,34 +57,24 @@ const EnhancedPharmacyDashboard = () => {
 
   const loadPrescriptionItems = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/pharmacist/prescriptionmedicines/');
-      
-      if (response.ok) {
-        const data = await response.json();
-        const groupedPrescriptions = groupPrescriptionItems(data);
-        setPrescriptionItems(groupedPrescriptions.slice(0, 5));
-      } else {
-        // Use mock data if API fails
-        setPrescriptionItems(getMockPrescriptionItems());
-      }
+      const response = await api.get('/pharmacist/prescriptionmedicines/');
+      const data = response.data.results || response.data;
+      const groupedPrescriptions = groupPrescriptionItems(data);
+      setPrescriptionItems(groupedPrescriptions.slice(0, 5));
     } catch (err) {
       console.error('Error loading prescription items:', err);
+      // Use mock data if API fails
       setPrescriptionItems(getMockPrescriptionItems());
     }
   };
 
   const loadRecentMedicines = async () => {
     try {
-      const medicinesResponse = await fetch('http://localhost:8000/api/pharmacist/medicines/');
-      if (medicinesResponse.ok) {
-        const medicinesData = await medicinesResponse.json();
-        const medicines = Array.isArray(medicinesData.results) ? medicinesData.results : 
-                        Array.isArray(medicinesData) ? medicinesData : [];
-        setRecentMedicines(medicines.slice(0, 5));
-      } else {
-        console.log('Medicines API requires authentication, using empty list');
-        setRecentMedicines([]);
-      }
+      const medicinesResponse = await api.get('/pharmacist/medicines/');
+      const medicinesData = medicinesResponse.data;
+      const medicines = Array.isArray(medicinesData.results) ? medicinesData.results : 
+                      Array.isArray(medicinesData) ? medicinesData : [];
+      setRecentMedicines(medicines.slice(0, 5));
     } catch (medErr) {
       console.log('Could not load medicines:', medErr.message);
       setRecentMedicines([]);
@@ -316,28 +304,24 @@ const EnhancedPharmacyDashboard = () => {
             <div className="card-body">
               <div className="row g-3">
                 <div className="col-md-3">
-                  <Link to="/test-pharmacist/medicines" className="btn btn-outline-primary w-100">
-                    💊 Manage Medicines
+                  <Link to="/pharmacist/medicines" className="btn btn-outline-primary w-100">
+                    💊 Medicine Management
                   </Link>
                 </div>
                 <div className="col-md-3">
-                  {/* <button 
-                    className="btn btn-outline-success w-100"
-                    onClick={handleViewPrescription}
-                  >
-                    📋 View Prescriptions
-                  </button> */}
+                  <Link to="/pharmacist/prescriptions" className="btn btn-outline-success w-100">
+                    📋 Prescription Management
+                  </Link>
                 </div>
                 <div className="col-md-3">
-                  {/* <button 
-                    className="btn btn-outline-info w-100"
-                    onClick={handleBillingManagement}
-                  >
+                  <Link to="/pharmacist/billing" className="btn btn-outline-info w-100">
                     🧾 Billing Management
-                  </button> */}
+                  </Link>
                 </div>
                 <div className="col-md-3">
-                  {/* Empty column */}
+                  <Link to="/pharmacist/dashboard" className="btn btn-outline-secondary w-100">
+                    📊 Dashboard
+                  </Link>
                 </div>
               </div>
             </div>
