@@ -13,6 +13,6 @@ const legacy =
     ? process.env.REACT_APP_API_BASE_URL
     : undefined;
 
-const API_BASE_URL = viteUrl || legacy || "http://localhost:8000/api";
+const API_BASE_URL = viteUrl || legacy || "https://cms-fullstack-qz12.onrender.com/api";
 
 export default API_BASE_URL;

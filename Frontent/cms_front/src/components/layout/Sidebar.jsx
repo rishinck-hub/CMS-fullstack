@@ -24,7 +24,7 @@ export default function Sidebar({ className = "" }) {
     } else if (hasRole('Doctor')) {
       return [
         { path: `${basePath}/dashboard`, label: 'Dashboard', icon: 'bi-speedometer2' },
-        { path: `${basePath}/patients`, label: 'Patients', icon: 'bi-people' },
+        // { path: `${basePath}/patients`, label: 'Patients', icon: 'bi-people' },
         { path: `${basePath}/consultations`, label: 'Consultations', icon: 'bi-clipboard-pulse' },
         { path: `${basePath}/prescriptions`, label: 'Prescription History', icon: 'bi-prescription' },
       ];

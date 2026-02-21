@@ -102,33 +102,44 @@ async function submit() {
     }
 
     // HIRE DATE VALIDATIONS (presence, not future, not before DOB, >= 18 on hire)
-    if (step > 0) {
-      const hireStr = data.staff?.hire_date || "";
-      if (!hireStr) {
-        throw new Error("Hire date is required for staff.");
-      }
-      const hire = new Date(hireStr);
-      const today = new Date();
-      // normalize to date-only for comparison
-      const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+// HIRE DATE VALIDATIONS (presence, not future, not before DOB, age between 18 and 60)
+if (step > 0) {
+  const hireStr = data.staff?.hire_date || "";
+  if (!hireStr) {
+    throw new Error("Hire date is required for staff.");
+  }
+  const hire = new Date(hireStr);
+  const today = new Date();
+  // normalize to date-only for comparison
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      if (hire > todayMid) {
-        throw new Error("Hire date cannot be in the future.");
-      }
+  if (hire > todayMid) {
+    throw new Error("Hire date cannot be in the future.");
+  }
 
-      const dobStr = data.staff?.dob || "";
-      if (dobStr) {
-        const dob = new Date(dobStr);
-        if (hire < dob) {
-          throw new Error("Hire date cannot be before date of birth.");
-        }
-        const eighteenAt = new Date(dob);
-        eighteenAt.setFullYear(dob.getFullYear() + 18);
-        if (hire < eighteenAt) {
-          throw new Error("Hire date must be on or after the 18th birthday.");
-        }
-      }
+  const dobStr = data.staff?.dob || "";
+  if (dobStr) {
+    const dob = new Date(dobStr);
+
+    if (hire < dob) {
+      throw new Error("Hire date cannot be before date of birth.");
     }
+
+    // Check minimum age (18 years)
+    const eighteenAt = new Date(dob);
+    eighteenAt.setFullYear(dob.getFullYear() + 18);
+    if (hire < eighteenAt) {
+      throw new Error("Hire date must be on or after the 18th birthday.");
+    }
+
+    // ✅ Check maximum age (60 years)
+    const sixtyAt = new Date(dob);
+    sixtyAt.setFullYear(dob.getFullYear() + 60);
+    if (hire > sixtyAt) {
+      throw new Error("Age at the time of hire cannot exceed 60 years.");
+    }
+  }
+}
 
     const payload = { ...data };
 
