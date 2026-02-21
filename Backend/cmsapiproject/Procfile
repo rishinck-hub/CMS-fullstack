@@ -1,1 +1,1 @@
-web: gunicorn CMS-fullstack.wsgi
+web: gunicorn cmsapiproject.wsgi
