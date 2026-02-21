@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,10 +27,12 @@ SECRET_KEY = 'django-insecure-+th0*hxlg#yc02-@(^$&&jz1_7aw=^t*984xl#ny$&#rwg%!0-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.onrender.com']
 
 CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -82,15 +86,20 @@ WSGI_APPLICATION = 'cmsapiproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'cms_backend',
+#         'USER': 'root',
+#         'PASSWORD': 'faith',
+#         'HOST': 'localhost',
+#         'PORT': 3306
+#     }
+# }
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cms_backend',
-        'USER': 'root',
-        'PASSWORD': 'faith',
-        'HOST': 'localhost',
-        'PORT': 3306
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
 from datetime import timedelta
 
