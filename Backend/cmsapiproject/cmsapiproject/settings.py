@@ -29,6 +29,10 @@ DEBUG = os.environ.get('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['.onrender.com']
 
+CORS_ALLOWED_ORIGINS = [
+    "https://cms-fullstack-l5k7-gli8qzqsf-rishin-cks-projects.vercel.app/",
+]
+
 CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
